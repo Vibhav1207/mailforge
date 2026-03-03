@@ -38,7 +38,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # MongoDB
-MONGODB_URI = os.environ.get('MONGODB_URI', '')
+MONGODB_URI = os.environ.get('MONGODB_URI', '').strip()
 if not MONGODB_URI:
     raise RuntimeError("MONGODB_URI environment variable is not set!")
 client = MongoClient(MONGODB_URI)
@@ -541,12 +541,13 @@ def guide():
     user = get_current_user()
     return render_template('guide.html', user=user)
 
-# ─── Block Static Source Access ───────────────────────────────
-@app.route('/static/<path:filename>')
-def custom_static(filename):
-    if filename.endswith(('.py', '.pyc', '.env', '.git', '.db', '.sqlite')):
-        abort(404)
-    return app.send_static_file(filename)
+# ─── Block Sensitive Static Files ─────────────────────────────
+@app.before_request
+def block_sensitive_static():
+    if request.path.startswith('/static/'):
+        blocked = ('.py', '.pyc', '.env', '.git', '.db', '.sqlite')
+        if any(request.path.endswith(ext) for ext in blocked):
+            abort(404)
 
 # ─── Run (local dev) ─────────────────────────────────────────
 if __name__ == '__main__':

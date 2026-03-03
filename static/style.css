@@ -2,29 +2,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg-primary: #070b14;
-  --bg-secondary: #0c1220;
-  --bg-card: rgba(12, 18, 32, 0.75);
-  --bg-glass: rgba(255, 255, 255, 0.03);
-  --bg-glass-hover: rgba(255, 255, 255, 0.06);
+  --bg-primary: #0f1117;
+  --bg-secondary: #161b2e;
+  --bg-card: rgba(22, 27, 46, 0.8);
+  --bg-glass: rgba(255, 255, 255, 0.025);
+  --bg-glass-hover: rgba(255, 255, 255, 0.055);
   --bg-input: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hover: rgba(212, 175, 55, 0.45);
-  --text-primary: #f0f0f0;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --accent: #d4af37;
-  --accent-light: #e8c84a;
-  --accent-glow: rgba(212, 175, 55, 0.25);
-  --accent-blue: #3b82f6;
-  --accent-blue-light: #60a5fa;
-  --accent-blue-glow: rgba(59, 130, 246, 0.25);
-  --success: #10b981;
-  --success-glow: rgba(16, 185, 129, 0.3);
-  --danger: #ef4444;
-  --danger-glow: rgba(239, 68, 68, 0.3);
-  --warning: #f59e0b;
-  --info: #38bdf8;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(45, 212, 168, 0.4);
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0b0;
+  --text-muted: #5f6577;
+  --accent: #2dd4a8;
+  --accent-light: #5eebc7;
+  --accent-glow: rgba(45, 212, 168, 0.2);
+  --accent-alt: #7c83db;
+  --accent-alt-light: #a5abf0;
+  --accent-alt-glow: rgba(124, 131, 219, 0.2);
+  --success: #36c98e;
+  --success-glow: rgba(54, 201, 142, 0.25);
+  --danger: #f47067;
+  --danger-glow: rgba(244, 112, 103, 0.25);
+  --warning: #e5a838;
+  --info: #64b5f6;
   --radius: 14px;
   --radius-sm: 8px;
   --radius-full: 50px;
@@ -62,8 +62,8 @@ body::before {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 25% 15%, rgba(212, 175, 55, 0.06) 0%, transparent 50%),
-    radial-gradient(circle at 75% 85%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+  background: radial-gradient(circle at 20% 20%, rgba(45, 212, 168, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(124, 131, 219, 0.035) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -126,7 +126,7 @@ a:hover {
 .sidebar-brand h1 {
   font-size: 1.25rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--accent-blue-light));
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -165,7 +165,7 @@ a:hover {
 }
 
 .nav-item.active {
-  background: rgba(212, 175, 55, 0.08);
+  background: rgba(45, 212, 168, 0.07);
 }
 
 .nav-item i {
@@ -190,7 +190,7 @@ a:hover {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -328,15 +328,15 @@ a:hover {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), #b8942e);
-  color: #0a0e1a;
+  background: linear-gradient(135deg, var(--accent), #1aab85);
+  color: #0f1117;
   box-shadow: 0 3px 12px var(--accent-glow);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px var(--accent-glow);
-  color: #0a0e1a;
+  color: #0f1117;
 }
 
 .btn-success {
@@ -376,14 +376,14 @@ a:hover {
 }
 
 .btn-blue {
-  background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+  background: linear-gradient(135deg, var(--accent-alt), #5a5fc7);
   color: white;
-  box-shadow: 0 3px 12px var(--accent-blue-glow);
+  box-shadow: 0 3px 12px var(--accent-alt-glow);
 }
 
 .btn-blue:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px var(--accent-blue-glow);
+  box-shadow: 0 6px 20px var(--accent-alt-glow);
   color: white;
 }
 
@@ -462,8 +462,8 @@ input[type="file"] {
 }
 
 input[type="file"]::file-selector-button {
-  background: linear-gradient(135deg, var(--accent), #b8942e);
-  color: #0a0e1a;
+  background: linear-gradient(135deg, var(--accent), #1aab85);
+  color: #0f1117;
   border: none;
   padding: 0.4rem 1rem;
   border-radius: var(--radius-full);
@@ -602,7 +602,7 @@ table {
 }
 
 thead th {
-  background: rgba(212, 175, 55, 0.06);
+  background: rgba(45, 212, 168, 0.05);
   padding: 0.75rem 0.9rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -653,9 +653,9 @@ tbody tr:hover {
 }
 
 .badge-info {
-  background: rgba(212, 175, 55, 0.1);
-  color: var(--accent);
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  background: rgba(124, 131, 219, 0.12);
+  color: var(--accent-alt-light);
+  border: 1px solid rgba(124, 131, 219, 0.25);
 }
 
 /* ===== Toast ===== */
@@ -694,7 +694,7 @@ tbody tr:hover {
 }
 
 .toast.toast-info {
-  border-left: 3px solid var(--accent-blue);
+  border-left: 3px solid var(--accent-alt);
 }
 
 .toast-close {
@@ -812,7 +812,7 @@ tbody tr:hover {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-blue));
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
   border-radius: 2px;
   transition: width 0.4s ease;
   width: 0%;
@@ -865,7 +865,7 @@ tbody tr:hover {
 .auth-brand h1 {
   font-size: 1.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--accent-blue-light));
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -902,8 +902,8 @@ tbody tr:hover {
 }
 
 .auth-tab.active {
-  background: linear-gradient(135deg, var(--accent), #b8942e);
-  color: #0a0e1a;
+  background: linear-gradient(135deg, var(--accent), #1aab85);
+  color: #0f1117;
 }
 
 .auth-form {
@@ -962,7 +962,7 @@ tbody tr:hover {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   color: white;
   display: flex;
   align-items: center;
@@ -1094,7 +1094,7 @@ tbody tr:hover {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   color: white;
   display: flex;
   align-items: center;
@@ -1154,7 +1154,7 @@ tbody tr:hover {
   font-weight: 800;
   margin-bottom: 0.6rem;
   position: relative;
-  background: linear-gradient(135deg, var(--accent-light), var(--accent-blue-light));
+  background: linear-gradient(135deg, var(--accent-light), var(--accent-alt-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1226,7 +1226,7 @@ tbody tr:hover {
 .drop-zone:hover,
 .drop-zone.dragover {
   border-color: var(--accent);
-  background: rgba(212, 175, 55, 0.04);
+  background: rgba(45, 212, 168, 0.04);
 }
 
 .drop-zone i {
@@ -1251,8 +1251,8 @@ tbody tr:hover {
 .countdown {
   text-align: center;
   padding: 0.85rem;
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(45, 212, 168, 0.07);
+  border: 1px solid rgba(45, 212, 168, 0.18);
   border-radius: var(--radius-sm);
   color: var(--accent);
   font-weight: 600;
