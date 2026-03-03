@@ -456,6 +456,33 @@ textarea.form-control {
   gap: 1rem;
 }
 
+/* Password Toggle */
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap .form-control {
+  padding-right: 2.6rem;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem;
+  transition: var(--transition);
+}
+
+.pw-toggle:hover {
+  color: var(--accent);
+}
+
 /* File Input */
 input[type="file"] {
   padding: 0.4rem;
@@ -1433,4 +1460,125 @@ tbody tr:hover {
   .auth-card .card-body {
     padding: 1.4rem;
   }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
+
+/* ===== Image Folder Management ===== */
+.folder-card {
+  transition: var(--transition);
+}
+
+.folder-card:hover {
+  transform: none;
+}
+
+.folder-header:hover .folder-chevron {
+  color: var(--accent);
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.image-thumb-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.image-thumb-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.image-thumb-wrap {
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+}
+
+.image-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-thumb-info {
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+
+.image-thumb-name {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.btn-icon-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-icon-delete:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* ===== Log Detail ===== */
+.log-detail-field {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-detail-field:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.log-detail-value {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-top: 0.3rem;
+}
+
+/* ===== Clickable Log Rows ===== */
+.log-row-clickable {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.log-row-clickable:hover {
+  background: rgba(45, 212, 168, 0.06) !important;
 }

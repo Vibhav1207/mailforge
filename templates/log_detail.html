@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Log Detail — MailForge{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h2 class="page-title"><i class="fas fa-envelope-open-text"></i> Email Log Detail</h2>
+    <a href="{{ url_for('logs') }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Logs</a>
+</div>
+
+<div style="max-width: 700px;">
+    <div class="card animate-in delay-1">
+        <div class="card-body">
+            <!-- Status Badge -->
+            <div style="margin-bottom:1.2rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                {% if log.status == 'Sent' %}
+                <span class="badge badge-success" style="font-size:0.9rem;padding:0.4rem 0.8rem;">
+                    <i class="fas fa-check-circle"></i> Sent Successfully
+                </span>
+                {% else %}
+                <span class="badge badge-danger" style="font-size:0.9rem;padding:0.4rem 0.8rem;">
+                    <i class="fas fa-times-circle"></i> Failed
+                </span>
+                {% endif %}
+                <span style="color:var(--text-muted);font-size:0.85rem;">
+                    <i class="fas fa-clock"></i> {{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                </span>
+            </div>
+
+            <!-- Recipient -->
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-user"></i> Recipient</label>
+                <div class="log-detail-value">{{ log.recipient_email }}</div>
+            </div>
+
+            <!-- Template -->
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-file-alt"></i> Template</label>
+                <div class="log-detail-value"><span class="badge badge-info">{{ log.template_name }}</span></div>
+            </div>
+
+            <!-- Subject -->
+            {% if log.subject %}
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-heading"></i> Subject</label>
+                <div class="log-detail-value" style="font-weight:600;">{{ log.subject }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Body -->
+            {% if log.body %}
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-align-left"></i> Body</label>
+                <div class="log-detail-value"
+                    style="white-space:pre-wrap;font-size:0.85rem;max-height:300px;overflow-y:auto;">{{ log.body }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Attached Image -->
+            {% if log.image_filename %}
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-paperclip"></i> Attached Image</label>
+                <div class="log-detail-value">
+                    <div style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--text-muted);">
+                        <i class="fas fa-image"></i> {{ log.image_filename }}
+                    </div>
+                    {% if log.image_data %}
+                    <div
+                        style="background:var(--bg-tertiary);border-radius:var(--radius-md);padding:0.75rem;text-align:center;border:1px solid var(--border);">
+                        <img src="data:image/png;base64,{{ log.image_data }}" alt="{{ log.image_filename }}"
+                            style="max-width:100%;max-height:400px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="log-detail-field">
+                <label class="form-label"><i class="fas fa-paperclip"></i> Attached Image</label>
+                <div class="log-detail-value" style="color:var(--text-muted);font-style:italic;">No image attached</div>
+            </div>
+            {% endif %}
+
+            <!-- Error Message -->
+            {% if log.error_message %}
+            <div class="log-detail-field">
+                <label class="form-label" style="color:var(--accent-danger);"><i
+                        class="fas fa-exclamation-triangle"></i> Error</label>
+                <div class="log-detail-value" style="color:var(--accent-danger);font-size:0.85rem;">{{ log.error_message
+                    }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

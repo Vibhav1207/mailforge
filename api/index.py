@@ -60,6 +60,41 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+import re
+def normalize_name(name):
+    """Normalize a name for matching: lowercase, remove extension, collapse whitespace/underscores."""
+    name = os.path.splitext(str(name))[0]  # remove extension if present
+    name = name.lower().strip()
+    name = re.sub(r'[_\-]+', ' ', name)    # underscores/hyphens → spaces
+    name = re.sub(r'\s+', ' ', name)       # collapse whitespace
+    return name.strip()
+
+def find_image_match(recipient_name, image_map):
+    """Find the best matching image for a recipient name using word-based matching."""
+    norm_recipient = normalize_name(recipient_name)
+    if not norm_recipient:
+        return None
+    # 1. Exact match
+    if norm_recipient in image_map:
+        return image_map[norm_recipient]
+    # 2. Word-based matching: check if ALL words in image key are present in recipient name
+    recipient_words = set(norm_recipient.split())
+    best_match = None
+    best_word_count = 0
+    for key, img_info in image_map.items():
+        key_words = set(key.split())
+        # All words from image filename must appear in recipient name
+        if key_words and key_words.issubset(recipient_words):
+            if len(key_words) > best_word_count:
+                best_match = img_info
+                best_word_count = len(key_words)
+    return best_match
+
+def make_thumbnail_b64(image_data, max_size=100*1024):
+    """Return base64 of image data, truncated if too large."""
+    b64 = base64.b64encode(image_data).decode('utf-8')
+    return b64
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -271,9 +306,53 @@ def upload_folder():
                 count += 1
 
         flash(f'Uploaded {count} images to "{folder_name}".', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('upload_folder'))
 
-    return render_template('upload_folder.html', user=user)
+    # Get existing folders and their image counts
+    image_folders = db.images.distinct('folder', {'user_id': session['user_id']})
+    folders_data = []
+    for folder in image_folders:
+        count = db.images.count_documents({'user_id': session['user_id'], 'folder': folder})
+        folders_data.append({'name': folder, 'count': count})
+    return render_template('upload_folder.html', user=user, folders=folders_data)
+
+@app.route('/api/folder/<folder_name>/images')
+@login_required
+def api_folder_images(folder_name):
+    safe_folder = secure_filename(folder_name)
+    images = db.images.find({'user_id': session['user_id'], 'folder': safe_folder})
+    result = []
+    for img in images:
+        result.append({
+            'id': str(img['_id']),
+            'filename': img['filename'],
+            'data': img['data'][:200] + '...' if len(img.get('data', '')) > 200 else img.get('data', ''),
+            'data_full': img.get('data', '')
+        })
+    return jsonify(result)
+
+@app.route('/api/folder/<folder_name>/images/<image_id>', methods=['DELETE'])
+@login_required
+def api_delete_image(folder_name, image_id):
+    safe_folder = secure_filename(folder_name)
+    try:
+        result = db.images.delete_one({
+            '_id': ObjectId(image_id),
+            'user_id': session['user_id'],
+            'folder': safe_folder
+        })
+        if result.deleted_count:
+            return jsonify({'success': True})
+        return jsonify({'error': 'Image not found'}), 404
+    except Exception:
+        return jsonify({'error': 'Invalid image ID'}), 400
+
+@app.route('/api/folder/<folder_name>', methods=['DELETE'])
+@login_required
+def api_delete_folder(folder_name):
+    safe_folder = secure_filename(folder_name)
+    result = db.images.delete_many({'user_id': session['user_id'], 'folder': safe_folder})
+    return jsonify({'success': True, 'deleted': result.deleted_count})
 
 # ─── Send Email ───────────────────────────────────────────────
 @app.route('/send_email', methods=['GET', 'POST'])
@@ -334,7 +413,7 @@ def send_email():
                             name_col = col
                             break
 
-                # Build image map from MongoDB
+                # Build image map from MongoDB (using normalized keys)
                 image_map = {}
                 selected_folder = request.form.get('image_folder')
                 if selected_folder:
@@ -344,7 +423,7 @@ def send_email():
                         'folder': safe_folder
                     })
                     for img_doc in folder_images:
-                        key = os.path.splitext(img_doc['filename'])[0].lower()
+                        key = normalize_name(img_doc['filename'])
                         image_map[key] = {
                             'data': base64.b64decode(img_doc['data']),
                             'filename': img_doc['filename']
@@ -357,7 +436,7 @@ def send_email():
                         if img and allowed_file(img.filename):
                             filename = secure_filename(img.filename)
                             img_data = img.read()
-                            key = os.path.splitext(filename)[0].lower()
+                            key = normalize_name(filename)
                             image_map[key] = {
                                 'data': img_data,
                                 'filename': filename
@@ -424,38 +503,49 @@ def send_email():
 
                     msg.attach(MIMEText(body_content, 'plain'))
 
-                    # Attach image
+                    # Attach image using normalized partial matching
                     attached_image = False
+                    attached_image_info = None
                     if name_col and image_map:
                         raw_name = str(row[name_col]).strip()
-                        safe_name_key = secure_filename(raw_name).lower()
-                        if safe_name_key in image_map:
-                            img_info = image_map[safe_name_key]
+                        matched = find_image_match(raw_name, image_map)
+                        if matched:
+                            img_info = matched
                             image = MIMEImage(img_info['data'], name=img_info['filename'])
                             image.add_header('Content-Disposition', 'attachment', filename=img_info['filename'])
                             msg.attach(image)
                             attached_image = True
+                            attached_image_info = img_info
 
                     if not attached_image and default_image:
                         image = MIMEImage(default_image['data'], name=default_image['filename'])
                         image.add_header('Content-Disposition', 'attachment', filename=default_image['filename'])
                         msg.attach(image)
+                        attached_image_info = default_image
+
+                    # Build log data with email content
+                    log_data = {
+                        'user_id': session['user_id'],
+                        'recipient_email': str(recipient_email).strip(),
+                        'template_name': template['name'],
+                        'subject': template['subject'],
+                        'body': body_content,
+                        'image_filename': attached_image_info['filename'] if attached_image_info else None,
+                        'image_data': make_thumbnail_b64(attached_image_info['data']) if attached_image_info else None,
+                        'timestamp': datetime.now(timezone.utc),
+                    }
 
                     # Send
                     try:
                         server.send_message(msg)
-                        db.logs.insert_one({
-                            'user_id': session['user_id'],
-                            'recipient_email': str(recipient_email).strip(),
-                            'template_name': template['name'],
-                            'status': 'Sent',
-                            'timestamp': datetime.now(timezone.utc),
-                            'error_message': None
-                        })
+                        log_data['status'] = 'Sent'
+                        log_data['error_message'] = None
+                        db.logs.insert_one(log_data.copy())
                         sent_count += 1
+                        img_label = f' 📎 {attached_image_info["filename"]}' if attached_image_info else ''
                         yield json.dumps({
                             'type': 'success',
-                            'message': f'Sent to {recipient_email}',
+                            'message': f'Sent to {recipient_email}{img_label}',
                             'sent': sent_count, 'failed': failed_count, 'total': total
                         }) + '\n'
                     except Exception as e:
@@ -467,14 +557,9 @@ def send_email():
                                 server.starttls()
                                 server.login(sender_email, sender_password)
                                 server.send_message(msg)
-                                db.logs.insert_one({
-                                    'user_id': session['user_id'],
-                                    'recipient_email': str(recipient_email).strip(),
-                                    'template_name': template['name'],
-                                    'status': 'Sent',
-                                    'timestamp': datetime.now(timezone.utc),
-                                    'error_message': None
-                                })
+                                log_data['status'] = 'Sent'
+                                log_data['error_message'] = None
+                                db.logs.insert_one(log_data.copy())
                                 sent_count += 1
                                 yield json.dumps({
                                     'type': 'success',
@@ -482,14 +567,9 @@ def send_email():
                                     'sent': sent_count, 'failed': failed_count, 'total': total
                                 }) + '\n'
                             except Exception as retry_e:
-                                db.logs.insert_one({
-                                    'user_id': session['user_id'],
-                                    'recipient_email': str(recipient_email).strip(),
-                                    'template_name': template['name'],
-                                    'status': 'Failed',
-                                    'timestamp': datetime.now(timezone.utc),
-                                    'error_message': str(retry_e)
-                                })
+                                log_data['status'] = 'Failed'
+                                log_data['error_message'] = str(retry_e)
+                                db.logs.insert_one(log_data.copy())
                                 failed_count += 1
                                 yield json.dumps({
                                     'type': 'error',
@@ -497,14 +577,9 @@ def send_email():
                                     'sent': sent_count, 'failed': failed_count, 'total': total
                                 }) + '\n'
                         else:
-                            db.logs.insert_one({
-                                'user_id': session['user_id'],
-                                'recipient_email': str(recipient_email).strip(),
-                                'template_name': template['name'],
-                                'status': 'Failed',
-                                'timestamp': datetime.now(timezone.utc),
-                                'error_message': str(e)
-                            })
+                            log_data['status'] = 'Failed'
+                            log_data['error_message'] = str(e)
+                            db.logs.insert_one(log_data.copy())
                             failed_count += 1
                             yield json.dumps({
                                 'type': 'error',
@@ -533,6 +608,20 @@ def logs():
     user = get_current_user()
     user_logs = list(db.logs.find({'user_id': session['user_id']}).sort('timestamp', -1))
     return render_template('logs.html', logs=user_logs, user=user)
+
+@app.route('/logs/<log_id>')
+@login_required
+def log_detail(log_id):
+    user = get_current_user()
+    try:
+        log = db.logs.find_one({'_id': ObjectId(log_id), 'user_id': session['user_id']})
+    except Exception:
+        flash('Invalid log entry.', 'danger')
+        return redirect(url_for('logs'))
+    if not log:
+        flash('Log entry not found.', 'danger')
+        return redirect(url_for('logs'))
+    return render_template('log_detail.html', log=log, user=user)
 
 # ─── Guide ────────────────────────────────────────────────────
 @app.route('/guide')

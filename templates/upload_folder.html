@@ -7,7 +7,8 @@
     <a href="{{ url_for('index') }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
 </div>
 
-<div style="max-width: 650px;">
+<div style="max-width: 750px;">
+    <!-- Upload Form -->
     <div class="card animate-in delay-1">
         <div class="card-body">
             <form method="POST" enctype="multipart/form-data" id="uploadForm">
@@ -38,6 +39,42 @@
             </form>
         </div>
     </div>
+
+    <!-- Existing Folders -->
+    {% if folders %}
+    <div class="animate-in delay-2" style="margin-top:1.5rem;">
+        <h3 style="font-size:1rem;color:var(--text-primary);margin-bottom:0.75rem;">
+            <i class="fas fa-folder-open" style="color:var(--accent-light);"></i> Your Image Folders
+        </h3>
+        {% for folder in folders %}
+        <div class="card folder-card" style="margin-bottom:0.75rem;">
+            <div class="card-body" style="padding:0.75rem 1rem;">
+                <div class="folder-header" onclick="toggleFolder('{{ folder.name }}')"
+                    style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;">
+                        <i class="fas fa-chevron-right folder-chevron" id="chevron-{{ folder.name }}"
+                            style="transition:transform 0.2s;color:var(--text-muted);font-size:0.75rem;"></i>
+                        <i class="fas fa-folder" style="color:var(--accent-warning);"></i>
+                        <span style="font-weight:600;color:var(--text-primary);">{{ folder.name }}</span>
+                        <span class="badge badge-info" style="font-size:0.7rem;">{{ folder.count }} images</span>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--accent-danger);font-size:0.75rem;"
+                        onclick="event.stopPropagation();deleteFolder('{{ folder.name }}')">
+                        <i class="fas fa-trash"></i> Delete All
+                    </button>
+                </div>
+                <div class="folder-images hidden" id="folder-{{ folder.name }}" style="margin-top:0.75rem;">
+                    <div class="image-grid" id="grid-{{ folder.name }}">
+                        <div style="text-align:center;padding:1rem;color:var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin"></i> Loading images...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 
 {% endblock %}
@@ -81,5 +118,88 @@
             fileList.innerHTML = names.join('<br>');
         }
     })();
+
+    // Folder management
+    var loadedFolders = {};
+
+    function toggleFolder(folderName) {
+        var container = document.getElementById('folder-' + folderName);
+        var chevron = document.getElementById('chevron-' + folderName);
+
+        if (container.classList.contains('hidden')) {
+            container.classList.remove('hidden');
+            chevron.style.transform = 'rotate(90deg)';
+            if (!loadedFolders[folderName]) {
+                loadFolderImages(folderName);
+            }
+        } else {
+            container.classList.add('hidden');
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function loadFolderImages(folderName) {
+        fetch('/api/folder/' + encodeURIComponent(folderName) + '/images')
+            .then(function (r) { return r.json(); })
+            .then(function (images) {
+                loadedFolders[folderName] = true;
+                var grid = document.getElementById('grid-' + folderName);
+                if (!images.length) {
+                    grid.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);">No images in this folder.</div>';
+                    return;
+                }
+                var html = '';
+                images.forEach(function (img) {
+                    html += '<div class="image-thumb-card" id="img-' + img.id + '">';
+                    html += '<div class="image-thumb-wrap">';
+                    html += '<img src="data:image/png;base64,' + img.data_full + '" alt="' + img.filename + '">';
+                    html += '</div>';
+                    html += '<div class="image-thumb-info">';
+                    html += '<span class="image-thumb-name" title="' + img.filename + '">' + img.filename + '</span>';
+                    html += '<button class="btn-icon-delete" onclick="deleteImage(\'' + folderName + '\',\'' + img.id + '\')" title="Delete">';
+                    html += '<i class="fas fa-trash"></i>';
+                    html += '</button>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                grid.innerHTML = html;
+            })
+            .catch(function () {
+                var grid = document.getElementById('grid-' + folderName);
+                grid.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--accent-danger);">Failed to load images.</div>';
+            });
+    }
+
+    function deleteImage(folderName, imageId) {
+        if (!confirm('Delete this image?')) return;
+        fetch('/api/folder/' + encodeURIComponent(folderName) + '/images/' + imageId, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    var el = document.getElementById('img-' + imageId);
+                    if (el) {
+                        el.style.transition = 'opacity 0.3s, transform 0.3s';
+                        el.style.opacity = '0';
+                        el.style.transform = 'scale(0.8)';
+                        setTimeout(function () { el.remove(); }, 300);
+                    }
+                } else {
+                    alert('Failed to delete image.');
+                }
+            });
+    }
+
+    function deleteFolder(folderName) {
+        if (!confirm('Delete ALL images in "' + folderName + '"? This cannot be undone.')) return;
+        fetch('/api/folder/' + encodeURIComponent(folderName), { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete folder.');
+                }
+            });
+    }
 </script>
 {% endblock %}

@@ -21,8 +21,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">App Password</label>
-                    <input type="password" name="sender_password" class="form-control"
-                        placeholder="16-char app password" required>
+                    <div class="pw-wrap">
+                        <input type="password" name="sender_password" class="form-control"
+                            placeholder="16-char app password" required>
+                        <button type="button" class="pw-toggle" onclick="togglePw(this)"><i
+                                class="fas fa-eye"></i></button>
+                    </div>
                     <div class="form-hint"><i class="fas fa-info-circle"></i> <a href="{{ url_for('guide') }}">How to
                             get an App Password?</a></div>
                 </div>
@@ -171,6 +175,12 @@
 
 {% block scripts %}
 <script>
+    function togglePw(btn) {
+        var input = btn.previousElementSibling;
+        var icon = btn.querySelector('i');
+        if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+        else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    }
     (function () {
         var form = document.getElementById('emailForm');
         var previewBtn = document.getElementById('previewBtn');

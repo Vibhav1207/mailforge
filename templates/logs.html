@@ -15,16 +15,25 @@
                     <th>Time</th>
                     <th>Recipient</th>
                     <th>Template</th>
+                    <th>Image</th>
                     <th>Status</th>
-                    <th>Message</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
-                <tr>
+                <tr class="log-row-clickable" onclick="window.location='/logs/{{ log._id }}'">
                     <td style="white-space:nowrap;">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td style="font-weight:600;color:var(--text-primary);">{{ log.recipient_email }}</td>
                     <td><span class="badge badge-info">{{ log.template_name }}</span></td>
+                    <td>
+                        {% if log.image_filename %}
+                        <span style="font-size:0.8rem;color:var(--accent-light);"><i class="fas fa-paperclip"></i> {{
+                            log.image_filename }}</span>
+                        {% else %}
+                        <span style="font-size:0.8rem;color:var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if log.status == 'Sent' %}
                         <span class="badge badge-success"><i class="fas fa-check-circle"></i> Sent</span>
@@ -32,7 +41,11 @@
                         <span class="badge badge-danger"><i class="fas fa-times-circle"></i> Failed</span>
                         {% endif %}
                     </td>
-                    <td style="color:var(--text-muted);font-size:0.8rem;">{{ log.error_message or '—' }}</td>
+                    <td>
+                        <a href="/logs/{{ log._id }}" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
