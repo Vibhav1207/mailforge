@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Upload Images — MailForge{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h2 class="page-title"><i class="fas fa-images"></i> Upload Images</h2>
+    <a href="{{ url_for('index') }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div style="max-width: 650px;">
+    <div class="card animate-in delay-1">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="form-group">
+                    <label class="form-label">Folder Name</label>
+                    <input type="text" name="folder_name" class="form-control"
+                        placeholder="e.g. Graduation Certificates" required>
+                    <div class="form-hint">Give a unique name to this image collection.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Select Images</label>
+                    <div class="drop-zone" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop images here or <span class="browse-text">browse files</span></p>
+                        <input type="file" name="files" id="fileInput" multiple accept="image/*" required
+                            style="display:none;">
+                    </div>
+                    <div id="fileList" class="mt-1" style="font-size:0.8rem;color:var(--text-muted);"></div>
+                    <div class="form-hint mt-1"><i class="fas fa-info-circle"></i> Image filenames should match
+                        recipient names from your Excel/CSV.</div>
+                </div>
+
+                <div class="flex justify-between gap-1" style="flex-wrap:wrap;">
+                    <a href="{{ url_for('index') }}" class="btn btn-ghost">Cancel</a>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-upload"></i> Upload Images</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var dropZone = document.getElementById('dropZone');
+        var fileInput = document.getElementById('fileInput');
+        var fileList = document.getElementById('fileList');
+
+        dropZone.addEventListener('click', function () { fileInput.click(); });
+
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function () {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            showFiles(fileInput.files);
+        });
+
+        fileInput.addEventListener('change', function () {
+            showFiles(fileInput.files);
+        });
+
+        function showFiles(files) {
+            if (!files.length) { fileList.innerHTML = ''; return; }
+            var names = [];
+            for (var i = 0; i < Math.min(files.length, 10); i++) {
+                names.push('<i class="fas fa-image" style="color:var(--accent-light)"></i> ' + files[i].name);
+            }
+            if (files.length > 10) names.push('...and ' + (files.length - 10) + ' more');
+            fileList.innerHTML = names.join('<br>');
+        }
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — MailForge{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="hero animate-in">
+    <h2><i class="fas fa-paper-plane"></i> Welcome to MailForge</h2>
+    <p>Create email templates, upload recipient lists, and send personalized bulk emails with attachments.</p>
+    <div class="hero-actions">
+        <a href="{{ url_for('create_template') }}" class="btn btn-primary"><i class="fas fa-plus"></i> New Template</a>
+        <a href="{{ url_for('send_email') }}" class="btn btn-success"><i class="fas fa-paper-plane"></i> Send Emails</a>
+        <a href="{{ url_for('guide') }}" class="btn btn-ghost"><i class="fas fa-book"></i> Setup Guide</a>
+    </div>
+</div>
+
+<!-- Templates -->
+<div class="page-header animate-in delay-1">
+    <h2 class="page-title"><i class="fas fa-th-large"></i> Your Templates</h2>
+    <a href="{{ url_for('create_template') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Create</a>
+</div>
+
+{% if templates %}
+<div class="template-grid">
+    {% for template in templates %}
+    <div class="template-card card animate-in delay-{{ loop.index % 5 + 1 }}">
+        <div class="card-body">
+            <div class="template-name">{{ template.name }}</div>
+            <div class="template-subject"><i class="fas fa-heading"></i> {{ template.subject }}</div>
+            <div class="template-body">{{ template.body }}</div>
+        </div>
+        <div class="template-actions">
+            <a href="{{ url_for('edit_template', template_id=template._id) }}" class="btn btn-ghost btn-sm"><i
+                    class="fas fa-edit"></i> Edit</a>
+            <a href="{{ url_for('send_email') }}" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i>
+                Use</a>
+            <form method="POST" action="{{ url_for('delete_template', template_id=template._id) }}"
+                style="flex:1; display:flex;" onsubmit="return confirm('Delete this template?')">
+                <button type="submit" class="btn btn-danger btn-sm" style="width:100%"><i
+                        class="fas fa-trash"></i></button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card animate-in delay-2">
+    <div class="empty-state">
+        <i class="fas fa-folder-open"></i>
+        <h3>No Templates Yet</h3>
+        <p>Create your first email template to start sending personalized bulk emails.</p>
+        <a href="{{ url_for('create_template') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Create
+            Template</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

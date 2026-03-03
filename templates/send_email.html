@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% block title %}Send Emails — MailForge{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h2 class="page-title"><i class="fas fa-paper-plane"></i> Send Bulk Emails</h2>
+</div>
+
+<div style="max-width: 750px;">
+    <form method="POST" enctype="multipart/form-data" id="emailForm">
+        <!-- Step 1: SMTP -->
+        <div class="step-section animate-in delay-1">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <span class="step-title">SMTP Configuration</span>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Your Gmail Address</label>
+                    <input type="email" name="sender_email" class="form-control" placeholder="you@gmail.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">App Password</label>
+                    <input type="password" name="sender_password" class="form-control"
+                        placeholder="16-char app password" required>
+                    <div class="form-hint"><i class="fas fa-info-circle"></i> <a href="{{ url_for('guide') }}">How to
+                            get an App Password?</a></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">SMTP Server</label>
+                    <input type="text" name="smtp_server" class="form-control" value="smtp.gmail.com" readonly
+                        style="opacity:0.6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">SMTP Port</label>
+                    <input type="number" name="smtp_port" class="form-control" value="587" readonly style="opacity:0.6">
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Template -->
+        <div class="step-section animate-in delay-2">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <span class="step-title">Select Template</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Template</label>
+                <select name="template_id" id="templateSelect" class="form-select" required>
+                    <option value="">— Choose a template —</option>
+                    {% for t in templates %}
+                    <option value="{{ t._id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if not templates %}
+                <div class="form-hint"><i class="fas fa-exclamation-circle"></i> No templates found. <a
+                        href="{{ url_for('create_template') }}">Create one first</a>.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Step 3: Recipients & Attachments -->
+        <div class="step-section animate-in delay-3">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <span class="step-title">Recipients & Attachments</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Excel / CSV File</label>
+                <input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls" required>
+                <div class="form-hint"><i class="fas fa-info-circle"></i> Must contain an "email" column. Optionally
+                    include a "name" column.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Image Folder (Optional)</label>
+                <select name="image_folder" class="form-select">
+                    <option value="">— No folder selected —</option>
+                    {% for folder in image_folders %}
+                    <option value="{{ folder }}">{{ folder }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-hint">Select a folder uploaded via the "Upload Images" page.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Or Upload Images Directly (Optional)</label>
+                <input type="file" name="bulk_images" class="form-control" multiple accept="image/*">
+                <div class="form-hint">Images whose filename matches a recipient's name will be attached.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Default Attachment (Optional)</label>
+                <input type="file" name="default_image" class="form-control" accept="image/*">
+                <div class="form-hint">Attached to recipients with no matching bulk image.</div>
+            </div>
+        </div>
+
+        <div class="animate-in delay-4">
+            <button type="button" id="previewBtn" class="btn btn-primary btn-lg btn-block">
+                <i class="fas fa-eye"></i> Preview & Send
+            </button>
+        </div>
+    </form>
+
+    <!-- Preview Modal -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title"><i class="fas fa-eye"></i> Email Preview</span>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label">Subject</label>
+                    <div id="previewSubject"
+                        style="padding:0.6rem 1rem;background:var(--bg-glass);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:0.9rem;">
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Body</label>
+                    <div id="previewBody"
+                        style="padding:0.8rem 1rem;background:var(--bg-glass);border-radius:var(--radius-sm);border:1px solid var(--border);white-space:pre-wrap;font-size:0.85rem;max-height:200px;overflow-y:auto;">
+                    </div>
+                </div>
+                <div id="previewImageWrap" class="mb-2 hidden">
+                    <label class="form-label">Default Attachment</label>
+                    <div
+                        style="padding:0.5rem;background:var(--bg-glass);border-radius:var(--radius-sm);border:1px solid var(--border);text-align:center;">
+                        <img id="previewImage" style="max-height:150px;border-radius:8px;">
+                    </div>
+                </div>
+                <div id="countdownArea" class="countdown hidden">
+                    Sending in <span id="countdownNum">3</span> seconds...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="cancelSend">Cancel</button>
+                <button class="btn btn-success" id="confirmSend"><i class="fas fa-paper-plane"></i> Send Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Log Terminal -->
+    <div id="logSection" class="hidden mt-3 animate-in">
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-dots"><span></span><span></span><span></span></div>
+                <div class="flex items-center gap-1">
+                    <span class="terminal-title">Sending Logs</span>
+                    <div class="spinner" id="logSpinner"></div>
+                </div>
+            </div>
+            <div class="terminal-body" id="logOutput"></div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+            <div class="terminal-footer hidden" id="logFooter">
+                <button class="btn btn-ghost btn-sm" onclick="location.reload()"><i class="fas fa-redo"></i> Send
+                    More</button>
+                <a href="{{ url_for('logs') }}" class="btn btn-primary btn-sm"><i class="fas fa-history"></i> View
+                    Logs</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var form = document.getElementById('emailForm');
+        var previewBtn = document.getElementById('previewBtn');
+        var previewModal = document.getElementById('previewModal');
+        var closeModal = document.getElementById('closeModal');
+        var cancelSend = document.getElementById('cancelSend');
+        var confirmSend = document.getElementById('confirmSend');
+        var countdownArea = document.getElementById('countdownArea');
+        var countdownNum = document.getElementById('countdownNum');
+        var logSection = document.getElementById('logSection');
+        var logOutput = document.getElementById('logOutput');
+        var logSpinner = document.getElementById('logSpinner');
+        var logFooter = document.getElementById('logFooter');
+        var progressBar = document.getElementById('progressBar');
+        var interval;
+
+        // Template data for preview
+        var templateSelect = document.getElementById('templateSelect');
+
+        previewBtn.addEventListener('click', function () {
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            var tid = templateSelect.value;
+            if (!tid) { alert('Please select a template.'); return; }
+
+            // Fetch template data via API
+            fetch('/api/template/' + tid)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) { alert('Template not found.'); return; }
+                    document.getElementById('previewSubject').textContent = data.subject;
+                    document.getElementById('previewBody').textContent = data.body;
+
+                    // Default image preview
+                    var fileInput = document.querySelector('input[name="default_image"]');
+                    var imgWrap = document.getElementById('previewImageWrap');
+                    if (fileInput.files && fileInput.files[0]) {
+                        var reader = new FileReader();
+                        reader.onload = function (e) {
+                            document.getElementById('previewImage').src = e.target.result;
+                            imgWrap.classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(fileInput.files[0]);
+                    } else {
+                        imgWrap.classList.add('hidden');
+                    }
+
+                    previewModal.classList.add('active');
+                    startCountdown();
+                });
+        });
+
+        function startCountdown() {
+            countdownArea.classList.remove('hidden');
+            var t = 3;
+            countdownNum.textContent = t;
+            clearInterval(interval);
+            interval = setInterval(function () {
+                t--;
+                countdownNum.textContent = t;
+                if (t <= 0) {
+                    clearInterval(interval);
+                    hideModal();
+                    doSend();
+                }
+            }, 1000);
+        }
+
+        function hideModal() {
+            previewModal.classList.remove('active');
+            clearInterval(interval);
+            countdownArea.classList.add('hidden');
+        }
+
+        closeModal.addEventListener('click', hideModal);
+        cancelSend.addEventListener('click', hideModal);
+
+        confirmSend.addEventListener('click', function () {
+            clearInterval(interval);
+            hideModal();
+            doSend();
+        });
+
+        async function doSend() {
+            form.classList.add('hidden');
+            logSection.classList.remove('hidden');
+            logOutput.innerHTML = '<div class="log-info"><i class="fas fa-circle-notch fa-spin"></i> Initializing...</div>';
+
+            try {
+                var formData = new FormData(form);
+                var response = await fetch("{{ url_for('send_email') }}", { method: 'POST', body: formData });
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var total = 0;
+
+                while (true) {
+                    var result = await reader.read();
+                    if (result.done) break;
+                    var chunk = decoder.decode(result.value, { stream: true });
+                    var lines = chunk.split('\n');
+
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i].trim();
+                        if (!line) continue;
+                        try {
+                            var data = JSON.parse(line);
+                            var html = '';
+
+                            if (data.total) total = data.total;
+
+                            if (data.type === 'info') {
+                                html = '<div class="log-info"><i class="fas fa-info-circle"></i> ' + data.message + '</div>';
+                            } else if (data.type === 'success') {
+                                html = '<div class="log-success"><i class="fas fa-check"></i> ' + data.message + '</div>';
+                                if (total > 0) progressBar.style.width = ((data.sent + data.failed) / total * 100) + '%';
+                            } else if (data.type === 'warning') {
+                                html = '<div class="log-warning"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</div>';
+                            } else if (data.type === 'error') {
+                                html = '<div class="log-error"><i class="fas fa-times-circle"></i> ' + data.message + '</div>';
+                                if (data.sent !== undefined && total > 0) progressBar.style.width = ((data.sent + data.failed) / total * 100) + '%';
+                            } else if (data.type === 'done') {
+                                html = '<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);color:var(--text-primary)"><strong>Completed:</strong> ' + data.sent + ' Sent, ' + data.failed + ' Failed</div>';
+                                logSpinner.classList.add('hidden');
+                                logFooter.classList.remove('hidden');
+                                progressBar.style.width = '100%';
+                            }
+
+                            logOutput.innerHTML += html;
+                            logOutput.scrollTop = logOutput.scrollHeight;
+                        } catch (e) { }
+                    }
+                }
+            } catch (err) {
+                logOutput.innerHTML += '<div class="log-error"><i class="fas fa-times-circle"></i> Network Error: ' + err.message + '</div>';
+                logSpinner.classList.add('hidden');
+            }
+        }
+    })();
+</script>
+{% endblock %}
