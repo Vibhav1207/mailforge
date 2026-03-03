@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
+
 <body>
     <div class="app-wrapper">
         <!-- Mobile Toggle -->
@@ -28,13 +30,16 @@
                 <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
                     <i class="fas fa-th-large"></i> Dashboard
                 </a>
-                <a href="{{ url_for('create_template') }}" class="nav-item {% if request.endpoint == 'create_template' %}active{% endif %}">
+                <a href="{{ url_for('create_template') }}"
+                    class="nav-item {% if request.endpoint == 'create_template' %}active{% endif %}">
                     <i class="fas fa-plus-circle"></i> New Template
                 </a>
-                <a href="{{ url_for('send_email') }}" class="nav-item {% if request.endpoint == 'send_email' %}active{% endif %}">
+                <a href="{{ url_for('send_email') }}"
+                    class="nav-item {% if request.endpoint == 'send_email' %}active{% endif %}">
                     <i class="fas fa-paper-plane"></i> Send Emails
                 </a>
-                <a href="{{ url_for('upload_folder') }}" class="nav-item {% if request.endpoint == 'upload_folder' %}active{% endif %}">
+                <a href="{{ url_for('upload_folder') }}"
+                    class="nav-item {% if request.endpoint == 'upload_folder' %}active{% endif %}">
                     <i class="fas fa-images"></i> Upload Images
                 </a>
                 <a href="{{ url_for('logs') }}" class="nav-item {% if request.endpoint == 'logs' %}active{% endif %}">
@@ -66,23 +71,23 @@
             <!-- Toast Messages -->
             <div class="toast-container" id="toastContainer">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                        <div class="toast toast-{{ category }}">
-                            {% if category == 'success' %}
-                                <i class="fas fa-check-circle text-success"></i>
-                            {% elif category == 'danger' %}
-                                <i class="fas fa-times-circle text-danger"></i>
-                            {% elif category == 'warning' %}
-                                <i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i>
-                            {% else %}
-                                <i class="fas fa-info-circle text-accent"></i>
-                            {% endif %}
-                            <span>{{ message }}</span>
-                            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-                        </div>
-                        {% endfor %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="toast toast-{{ category }}">
+                    {% if category == 'success' %}
+                    <i class="fas fa-check-circle text-success"></i>
+                    {% elif category == 'danger' %}
+                    <i class="fas fa-times-circle text-danger"></i>
+                    {% elif category == 'warning' %}
+                    <i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle text-accent"></i>
                     {% endif %}
+                    <span>{{ message }}</span>
+                    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+                {% endif %}
                 {% endwith %}
             </div>
 
@@ -94,10 +99,10 @@
                     Developed by <strong>Vibhav Patel</strong>
                 </div>
                 <div class="footer-links">
-                    <a href="https://www.linkedin.com/in/vibhav-patel-a23072290/" target="_blank" class="footer-link">
+                    <a href="https://www.linkedin.com/in/vibhavpatel/" target="_blank" class="footer-link">
                         <i class="fab fa-linkedin"></i> LinkedIn
                     </a>
-                    <a href="https://www.instagram.com/vibhav_1207/" target="_blank" class="footer-link">
+                    <a href="https://www.instagram.com/vibhav.patel07/" target="_blank" class="footer-link">
                         <i class="fab fa-instagram"></i> Instagram
                     </a>
                     <a href="https://vibhav-patel-portfolio.vercel.app/" target="_blank" class="footer-link">
@@ -110,8 +115,8 @@
 
     <script>
         // Auto-dismiss toasts
-        document.querySelectorAll('.toast').forEach(function(t) {
-            setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 4000);
+        document.querySelectorAll('.toast').forEach(function (t) {
+            setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 400); }, 4000);
         });
 
         // Mobile sidebar toggle
@@ -119,13 +124,13 @@
         var sidebar = document.getElementById('sidebar');
         var overlay = document.getElementById('mobileOverlay');
         if (toggle) {
-            toggle.addEventListener('click', function() {
+            toggle.addEventListener('click', function () {
                 sidebar.classList.toggle('open');
                 overlay.classList.toggle('open');
             });
         }
         if (overlay) {
-            overlay.addEventListener('click', function() {
+            overlay.addEventListener('click', function () {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('open');
             });
@@ -133,4 +138,5 @@
     </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>
