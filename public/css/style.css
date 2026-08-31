@@ -1582,3 +1582,279 @@ tbody tr:hover {
 .log-row-clickable:hover {
   background: rgba(45, 212, 168, 0.06) !important;
 }
+
+/* ===== Stats Grid ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 0.1rem;
+}
+
+/* ===== Dashboard Grid ===== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+/* ===== Quick Actions ===== */
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.quick-action:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.quick-action i:first-child {
+  font-size: 1rem;
+  width: 18px;
+  text-align: center;
+}
+
+/* ===== Domain Cards ===== */
+.domain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 0.75rem;
+}
+
+.domain-card {
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.domain-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hover);
+}
+
+/* ===== DNS Records ===== */
+.dns-record {
+  padding: 0.9rem;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+}
+
+.dns-record:last-child {
+  margin-bottom: 0;
+}
+
+.dns-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.dns-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dns-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.dns-label {
+  min-width: 55px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-top: 0.3rem;
+}
+
+.dns-value {
+  background: var(--bg-input);
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  word-break: break-all;
+  border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.dns-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.dns-copy-row .dns-value {
+  flex: 1;
+}
+
+/* ===== Code Tabs ===== */
+.code-tabs {
+  margin-top: 0.5rem;
+}
+
+.code-tab-bar {
+  display: flex;
+  gap: 0;
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.code-tab {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.code-tab.active {
+  background: var(--accent);
+  color: #0f1117;
+}
+
+.code-tab:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--bg-glass-hover);
+}
+
+.code-block {
+  position: relative;
+  background: #080d15;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  overflow: hidden;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.code-block code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+/* ===== Nav Section ===== */
+.nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 1.5rem;
+}
+
+.nav-section {
+  display: block;
+  padding: 0.3rem 1.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+/* ===== Filter Bar ===== */
+.filter-bar .btn {
+  font-size: 0.75rem;
+}
+
+/* ===== Responsive Stats Grid ===== */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .domain-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

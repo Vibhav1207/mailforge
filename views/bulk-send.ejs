@@ -1,0 +1,128 @@
+<%- include('partials/head', { title: 'Bulk Send' }) %>
+
+<div class="page-header animate-in">
+  <h2 class="page-title"><i class="fas fa-paper-plane"></i> Bulk Send</h2>
+</div>
+
+<div class="alert alert-info animate-in delay-1" style="margin-bottom: 1rem;">
+  <i class="fas fa-info-circle"></i>
+  <span>Select a verified sender identity to send from. SMTP credentials are configured via environment variables. For API-based sending, see the <a href="/developers">API docs</a>.</span>
+</div>
+
+<div class="card animate-in delay-2">
+  <div class="card-body">
+    <% if (senderIdentities.length === 0) { %>
+    <div class="empty-state">
+      <i class="fas fa-at"></i>
+      <h3>No Verified Sender Identities</h3>
+      <p>You need at least one verified sender identity to send emails. Add a domain, verify it, then create a sender identity.</p>
+      <a href="/identities" class="btn btn-primary"><i class="fas fa-plus"></i> Create Sender Identity</a>
+    </div>
+    <% } else { %>
+    <form id="bulkForm" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Send From</label>
+        <select name="sender_identity_id" class="form-select" required id="senderSelect">
+          <option value="">Select a sender identity...</option>
+          <% senderIdentities.forEach(function(s) { %>
+          <option value="<%= s._id %>"><%= s.display_name %> &lt;<%= s.email %>&gt; (<%= s.domain_name %>)</option>
+          <% }); %>
+        </select>
+        <div class="form-hint">Choose which verified sender email to send from. SMTP credentials are configured in your environment.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Template</label>
+        <select name="template_id" class="form-select" required id="templateSelect">
+          <option value="">Select a template...</option>
+          <% if (typeof templates !== 'undefined') { templates.forEach(function(t) { %>
+          <option value="<%= t._id %>"><%= t.name %></option>
+          <% }); } %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recipients (CSV/Excel)</label>
+        <input type="file" name="file" class="form-control" accept=".csv,.xls,.xlsx" required>
+        <div class="form-hint">File must contain an "email" column. Optional "name" column for personalization.</div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" id="bulkSubmit">
+        <i class="fas fa-paper-plane"></i> Start Sending
+      </button>
+    </form>
+    <% } %>
+  </div>
+</div>
+
+<!-- Progress Terminal -->
+<div class="terminal animate-in delay-3" id="bulkTerminal" style="display: none; margin-top: 1rem;">
+  <div class="terminal-header">
+    <div class="terminal-dots"><span></span><span></span><span></span></div>
+    <span class="terminal-title">Sending Progress</span>
+  </div>
+  <div class="terminal-body" id="bulkLog"></div>
+  <div class="terminal-footer">
+    <div class="progress-bar-wrap" style="flex: 1; margin: 0;">
+      <div class="progress-bar-fill" id="bulkProgress" style="width: 0%;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('bulkForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var form = this;
+  var formData = new FormData(form);
+  var log = document.getElementById('bulkLog');
+  var terminal = document.getElementById('bulkTerminal');
+  var progress = document.getElementById('bulkProgress');
+  var submitBtn = document.getElementById('bulkSubmit');
+
+  terminal.style.display = 'block';
+  log.innerHTML = '';
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<div class="spinner"></div> Sending...';
+
+  fetch('/bulk-send', { method: 'POST', body: formData })
+    .then(function(response) {
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      function read() {
+        reader.read().then(function(result) {
+          if (result.done) return;
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          lines.forEach(function(line) {
+            if (!line.trim()) return;
+            try {
+              var data = JSON.parse(line);
+              var div = document.createElement('div');
+              if (data.type === 'success') div.className = 'log-success';
+              else if (data.type === 'error') div.className = 'log-error';
+              else if (data.type === 'warning') div.className = 'log-warning';
+              else div.className = 'log-info';
+              div.textContent = (data.sent !== undefined ? '[' + data.sent + '/' + data.total + '] ' : '') + data.message;
+              log.appendChild(div);
+              log.scrollTop = log.scrollHeight;
+              if (data.total) progress.style.width = Math.round(((data.sent + data.failed) / data.total) * 100) + '%';
+              if (data.type === 'done') {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Start Sending';
+              }
+            } catch(err) {}
+          });
+          read();
+        });
+      }
+      read();
+    })
+    .catch(function(err) {
+      log.innerHTML += '<div class="log-error">Connection error: ' + err.message + '</div>';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Start Sending';
+    });
+});
+</script>
+
+<%- include('partials/footer') %>

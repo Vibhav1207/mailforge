@@ -1,0 +1,163 @@
+<%- include('partials/head', { title: 'Overview' }) %>
+
+<!-- Hero / Onboarding -->
+<% if (domainCount === 0) { %>
+<div class="hero animate-in">
+  <h2><i class="fas fa-rocket"></i> Welcome to MailForge</h2>
+  <p>Developer email infrastructure. Add your first domain to start sending emails through our API.</p>
+  <div class="hero-actions">
+    <a href="/domains" class="btn btn-primary btn-lg"><i class="fas fa-plus"></i> Add Your First Domain</a>
+    <a href="/developers" class="btn btn-ghost btn-lg"><i class="fas fa-code"></i> View API Docs</a>
+  </div>
+</div>
+<% } %>
+
+<!-- Stats Grid -->
+<div class="stats-grid animate-in delay-1">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(45,212,168,0.12); color: var(--accent);">
+      <i class="fas fa-envelope"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= totalEmails %></div>
+      <div class="stat-label">Total Emails</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(54,201,142,0.12); color: var(--success);">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= delivered %></div>
+      <div class="stat-label">Delivered</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(244,112,103,0.12); color: var(--danger);">
+      <i class="fas fa-times-circle"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= failed %></div>
+      <div class="stat-label">Failed</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(124,131,219,0.12); color: var(--accent-alt);">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= deliveryRate %>%</div>
+      <div class="stat-label">Delivery Rate</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="stats-grid animate-in delay-2" style="margin-top: 0.75rem;">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(100,181,246,0.12); color: var(--info);">
+      <i class="fas fa-globe"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= verifiedDomains %>/<%= domainCount %></div>
+      <div class="stat-label">Domains Verified</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(229,168,56,0.12); color: var(--warning);">
+      <i class="fas fa-key"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= apiKeysCount %></div>
+      <div class="stat-label">Active API Keys</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(45,212,168,0.12); color: var(--accent);">
+      <i class="fas fa-clock"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= queued %></div>
+      <div class="stat-label">Queued</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(124,131,219,0.12); color: var(--accent-alt);">
+      <i class="fas fa-calendar"></i>
+    </div>
+    <div>
+      <div class="stat-value"><%= monthEmails %></div>
+      <div class="stat-label">This Month</div>
+    </div>
+  </div>
+</div>
+
+<!-- 7-Day Chart -->
+<div class="card animate-in delay-3" style="margin-top: 1rem;">
+  <div class="card-header">
+    <h3 style="font-size: 0.9rem; font-weight: 600;"><i class="fas fa-chart-bar" style="color: var(--accent); margin-right: 0.5rem;"></i> Emails — Last 7 Days</h3>
+  </div>
+  <div class="card-body">
+    <div class="chart-bars">
+      <% var maxCount = Math.max(...dailyStats.map(function(d) { return d.count; }), 1); %>
+      <% dailyStats.forEach(function(d) { %>
+      <div class="chart-bar-col">
+        <div class="chart-bar-wrap">
+          <div class="chart-bar" style="height: <%= Math.round((d.count / maxCount) * 100) %>%;">
+            <span class="chart-bar-value"><%= d.count %></span>
+          </div>
+        </div>
+        <span class="chart-bar-label"><%= d.label %></span>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Emails -->
+<div class="card animate-in delay-4" style="margin-top: 1rem;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 0.9rem; font-weight: 600;"><i class="fas fa-clock" style="color: var(--accent); margin-right: 0.5rem;"></i> Recent Activity</h3>
+    <a href="/emails" class="btn btn-ghost btn-sm">View All</a>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <% if (recentEmails.length === 0) { %>
+    <div class="empty-state" style="padding: 2rem;">
+      <i class="fas fa-envelope-open"></i>
+      <h3>No Emails Yet</h3>
+      <p>Send your first email via the API or bulk send.</p>
+    </div>
+    <% } else { %>
+    <div class="table-wrap" style="border: none; border-radius: 0;">
+      <table>
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>From</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recentEmails.forEach(function(e) { %>
+          <tr class="log-row-clickable" onclick="window.location='/emails/<%= e.email_id %>'">
+            <td><%= e.to && e.to[0] ? e.to[0] : '-' %></td>
+            <td><%= e.from_email %></td>
+            <td><%= e.subject ? (e.subject.length > 40 ? e.subject.slice(0,40) + '...' : e.subject) : '-' %></td>
+            <td>
+              <span class="badge badge-<%= e.status === 'delivered' ? 'success' : e.status === 'failed' ? 'danger' : 'info' %>">
+                <%= e.status %>
+              </span>
+            </td>
+            <td><%= formatDate(e.created_at) %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

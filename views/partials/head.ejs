@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= typeof title !== 'undefined' ? title : 'MailForge' %> — MailForge</title>
+  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <!-- Mobile Toggle -->
+  <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Menu"><i class="fas fa-bars"></i></button>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1><i class="fas fa-bolt"></i> MailForge</h1>
+      <p>Email Infrastructure</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item <%= currentPath === '/' ? 'active' : '' %>">
+        <i class="fas fa-th-large"></i> Overview
+      </a>
+      <a href="/domains" class="nav-item <%= currentPath.startsWith('/domains') ? 'active' : '' %>">
+        <i class="fas fa-globe"></i> Domains
+      </a>
+      <a href="/identities" class="nav-item <%= currentPath === '/identities' ? 'active' : '' %>">
+        <i class="fas fa-at"></i> Senders
+      </a>
+      <a href="/api-keys" class="nav-item <%= currentPath === '/api-keys' ? 'active' : '' %>">
+        <i class="fas fa-key"></i> API Keys
+      </a>
+
+      <div class="nav-divider"></div>
+      <span class="nav-section">Messaging</span>
+
+      <a href="/emails" class="nav-item <%= currentPath.startsWith('/emails') ? 'active' : '' %>">
+        <i class="fas fa-envelope"></i> Emails
+      </a>
+      <a href="/templates" class="nav-item <%= currentPath.startsWith('/templates') ? 'active' : '' %>">
+        <i class="fas fa-file-code"></i> Templates
+      </a>
+      <a href="/webhooks" class="nav-item <%= currentPath === '/webhooks' ? 'active' : '' %>">
+        <i class="fas fa-plug"></i> Webhooks
+      </a>
+
+      <div class="nav-divider"></div>
+      <span class="nav-section">Tools</span>
+
+      <a href="/analytics" class="nav-item <%= currentPath === '/analytics' ? 'active' : '' %>">
+        <i class="fas fa-chart-bar"></i> Analytics
+      </a>
+      <a href="/developers" class="nav-item <%= currentPath === '/developers' ? 'active' : '' %>">
+        <i class="fas fa-code"></i> API Docs
+      </a>
+      <a href="/bulk-send" class="nav-item <%= currentPath === '/bulk-send' ? 'active' : '' %>">
+        <i class="fas fa-paper-plane"></i> Bulk Send
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <a href="/settings" class="nav-item <%= currentPath === '/settings' ? 'active' : '' %>">
+        <i class="fas fa-cog"></i> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <% if (typeof user !== 'undefined' && user) { %>
+      <div class="sidebar-user">
+        <div class="user-avatar"><%= user.name ? user.name.charAt(0).toUpperCase() : 'U' %></div>
+        <div class="user-info">
+          <div class="user-name"><%= user.name %></div>
+          <div class="user-email"><%= user.email %></div>
+        </div>
+      </div>
+      <% } %>
+      <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Toast Messages -->
+    <div class="toast-container" id="toastContainer">
+      <% if (typeof flash !== 'undefined' && flash && flash.message) { %>
+      <div class="toast toast-<%= flash.type || 'info' %>">
+        <% if (flash.type === 'success') { %>
+        <i class="fas fa-check-circle text-success"></i>
+        <% } else if (flash.type === 'danger') { %>
+        <i class="fas fa-times-circle text-danger"></i>
+        <% } else if (flash.type === 'warning') { %>
+        <i class="fas fa-exclamation-triangle" style="color: var(--warning)"></i>
+        <% } else { %>
+        <i class="fas fa-info-circle text-accent"></i>
+        <% } %>
+        <span><%= flash.message %></span>
+        <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+      </div>
+      <% } %>
+    </div>

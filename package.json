@@ -1,0 +1,28 @@
+{
+  "name": "mailforge",
+  "version": "2.0.0",
+  "description": "Developer email infrastructure platform — Resend-style email API",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "vercel-build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ejs": "^3.1.10",
+    "express-session": "^1.18.0",
+    "connect-mongo": "^5.1.0",
+    "mongodb": "^6.8.0",
+    "bcryptjs": "^2.4.3",
+    "nodemailer": "^6.9.0",
+    "helmet": "^8.0.0",
+    "express-rate-limit": "^7.4.0",
+    "csrf-csrf": "^3.0.6",
+    "cookie-parser": "^1.4.6",
+    "multer": "^1.4.5-lts.1",
+    "csv-parse": "^5.5.0",
+    "xlsx": "^0.18.5",
+    "dns2": "^2.1.0"
+  }
+}

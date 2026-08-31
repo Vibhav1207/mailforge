@@ -1,6 +1,0 @@
-flask
-pymongo
-dnspython
-pandas
-openpyxl
-gunicorn

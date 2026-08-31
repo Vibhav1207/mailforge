@@ -1,0 +1,37 @@
+<%- include('partials/head', { title: 'Templates' }) %>
+
+<div class="page-header animate-in">
+  <h2 class="page-title"><i class="fas fa-file-code"></i> Templates</h2>
+  <a href="/templates/create" class="btn btn-primary"><i class="fas fa-plus"></i> Create Template</a>
+</div>
+
+<% if (templates.length === 0) { %>
+<div class="card animate-in delay-1">
+  <div class="empty-state">
+    <i class="fas fa-file-code"></i>
+    <h3>No Templates Yet</h3>
+    <p>Create reusable email templates with variable support.</p>
+    <a href="/templates/create" class="btn btn-primary"><i class="fas fa-plus"></i> Create Template</a>
+  </div>
+</div>
+<% } else { %>
+<div class="template-grid animate-in delay-1">
+  <% templates.forEach(function(t) { %>
+  <div class="template-card card">
+    <div class="card-body">
+      <div class="template-name"><%= t.name %></div>
+      <div class="template-subject"><i class="fas fa-heading"></i> <%= t.subject %></div>
+      <div class="template-body"><%= t.body || t.html_body || '' %></div>
+    </div>
+    <div class="template-actions">
+      <a href="/templates/<%= t._id %>/edit" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i> Edit</a>
+      <form method="POST" action="/templates/<%= t._id %>/delete" style="flex: 1; display: flex;" onsubmit="return confirm('Delete this template?')">
+        <button type="submit" class="btn btn-danger btn-sm" style="width: 100%;"><i class="fas fa-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  <% }); %>
+</div>
+<% } %>
+
+<%- include('partials/footer') %>

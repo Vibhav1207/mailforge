@@ -1,0 +1,39 @@
+<%- include('partials/head', { title: template ? 'Edit Template' : 'Create Template' }) %>
+
+<div class="page-header animate-in">
+  <div>
+    <a href="/templates" style="color: var(--text-muted); font-size: 0.85rem;"><i class="fas fa-arrow-left"></i> Templates</a>
+    <h2 class="page-title" style="margin-top: 0.25rem;"><%= template ? 'Edit Template' : 'Create Template' %></h2>
+  </div>
+</div>
+
+<div class="card animate-in delay-1" style="max-width: 700px;">
+  <div class="card-body">
+    <form method="POST" action="<%= template ? '/templates/' + template._id + '/edit' : '/templates/create' %>">
+      <div class="form-group">
+        <label class="form-label">Template Name</label>
+        <input type="text" name="name" class="form-control" value="<%= template ? template.name : '' %>" placeholder="Welcome Email" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject Line</label>
+        <input type="text" name="subject" class="form-control" value="<%= template ? template.subject : '' %>" placeholder="Welcome {{name}}!" required>
+        <div class="form-hint">Use {{variable}} for dynamic content</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plain Text Body</label>
+        <textarea name="body" class="form-control" rows="6" placeholder="Hello {{name}}, welcome to our platform..."><%= template ? template.body : '' %></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">HTML Body (optional)</label>
+        <textarea name="html_body" class="form-control" rows="8" placeholder="<h1>Welcome {{name}}</h1>"><%= template ? template.html_body : '' %></textarea>
+        <div class="form-hint">HTML takes priority over plain text when both are provided</div>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> <%= template ? 'Update Template' : 'Create Template' %></button>
+        <a href="/templates" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

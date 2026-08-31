@@ -1,0 +1,81 @@
+<%- include('partials/head', { title: 'API Keys' }) %>
+
+<div class="page-header animate-in">
+  <h2 class="page-title"><i class="fas fa-key"></i> API Keys</h2>
+  <button class="btn btn-primary" onclick="openModal('createKeyModal')"><i class="fas fa-plus"></i> Create API Key</button>
+</div>
+
+<div class="card animate-in delay-1">
+  <div class="card-body" style="padding: 0;">
+    <% if (apiKeys.length === 0) { %>
+    <div class="empty-state">
+      <i class="fas fa-key"></i>
+      <h3>No API Keys</h3>
+      <p>Create an API key to start sending emails programmatically.</p>
+      <button class="btn btn-primary" onclick="openModal('createKeyModal')"><i class="fas fa-plus"></i> Create API Key</button>
+    </div>
+    <% } else { %>
+    <div class="table-wrap" style="border: none; border-radius: 0;">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Key</th><th>Environment</th><th>Created</th><th>Last Used</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <% apiKeys.forEach(function(k) { %>
+          <tr>
+            <td><strong><%= k.name %></strong></td>
+            <td><code style="font-size: 0.78rem; color: var(--text-muted);"><%= k.key_preview %></code></td>
+            <td><span class="badge badge-<%= k.environment === 'production' ? 'success' : 'info' %>"><%= k.environment %></span></td>
+            <td><%= formatDate(k.created_at) %></td>
+            <td><%= k.last_used ? formatDate(k.last_used) : 'Never' %></td>
+            <td><span class="badge badge-<%= k.revoked ? 'danger' : 'success' %>"><%= k.revoked ? 'Revoked' : 'Active' %></span></td>
+            <td>
+              <% if (!k.revoked) { %>
+              <form method="POST" action="/api-keys/<%= k._id %>/revoke" style="display:inline;" onsubmit="return confirm('Revoke this key? It cannot be undone.')">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-ban"></i> Revoke</button>
+              </form>
+              <% } %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Create Key Modal -->
+<div class="modal-overlay" id="createKeyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Create API Key</span>
+      <button class="modal-close" onclick="closeModal('createKeyModal')">&times;</button>
+    </div>
+    <form method="POST" action="/api-keys/create">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Key Name</label>
+          <input type="text" name="name" class="form-control" placeholder="My Production Website" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Environment</label>
+          <select name="environment" class="form-select">
+            <option value="production">Production</option>
+            <option value="test">Test</option>
+          </select>
+        </div>
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>The full API key will only be shown once. Store it securely.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('createKeyModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Key</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

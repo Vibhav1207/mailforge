@@ -1,20 +1,12 @@
 # Environment variables
 .env
 
-# Python
+# Node.js
+node_modules/
+
+# Python (legacy)
 __pycache__/
 *.py[cod]
-*.pyo
-*.egg-info/
-dist/
-build/
-*.egg
-
-# Instance folder (legacy SQLite)
-instance/
-
-# Uploads (user-generated, not for Git)
-static/uploads/
 
 # OS
 .DS_Store
@@ -24,8 +16,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Old app folder (migrated to root)
-email_sender_app/
-
 # Vercel
 .vercel/
+
+# Old files
+instance/
+static/uploads/
