@@ -38,28 +38,40 @@ async function getOrCreateWorkspace(userId) {
   return workspaces.findOne({ _id: result.insertedId });
 }
 
-// Auth-required middleware
+// Auto-create or find default user (no auth required)
+async function ensureDefaultUser() {
+  let user = await users.findOne({ email: 'admin@mailforge.local' });
+  if (user) return user;
+
+  const result = await users.insertOne({
+    name: 'Admin',
+    email: 'admin@mailforge.local',
+    password_hash: '',
+    email_verified: true,
+    created_at: new Date()
+  });
+  return users.findOne({ _id: result.insertedId });
+}
+
+// Auth-required middleware — bypassed, auto-logs in
 function requireAuth(req, res, next) {
-  if (!req.session || !req.session.userId) {
-    if (req.method === 'POST' && !req.xhr) {
-      req.session.returnTo = req.originalUrl;
-    }
-    return res.redirect('/login');
-  }
   next();
 }
 
-// Workspace context middleware — loads workspace into res.locals
+// Workspace context middleware — auto-creates default user/workspace
 async function loadWorkspace(req, res, next) {
-  if (!req.session || !req.session.userId) {
-    return res.redirect('/login');
+  let user;
+  if (req.session && req.session.userId) {
+    user = await getCurrentUser(req.session.userId);
   }
-  const workspace = await getOrCreateWorkspace(req.session.userId);
+  if (!user) {
+    user = await ensureDefaultUser();
+    req.session.userId = user._id.toString();
+  }
+  const workspace = await getOrCreateWorkspace(user._id.toString());
   if (!workspace) {
-    req.session.destroy();
-    return res.redirect('/login');
+    return res.status(500).render('login', { flash: { type: 'danger', message: 'Failed to create workspace.' } });
   }
-  const user = await getCurrentUser(req.session.userId);
   res.locals.workspace = workspace;
   res.locals.user = user;
   res.locals.currentPath = req.path;

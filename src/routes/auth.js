@@ -4,10 +4,9 @@ const { users } = require('../db');
 const { hashPassword, verifyPassword } = require('../helpers');
 const { setFlash } = require('../middleware');
 
-// Login page
+// Login page — redirect to dashboard (auth bypassed)
 router.get('/login', (req, res) => {
-  if (req.session && req.session.userId) return res.redirect('/');
-  res.render('login', { flash: req.session.flash || {} });
+  res.redirect('/');
 });
 
 // Register — disabled for now
@@ -16,33 +15,14 @@ router.post('/register', (req, res) => {
   res.redirect('/login');
 });
 
-// Login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const trimmedEmail = (email || '').trim().toLowerCase();
-
-    const user = await users.findOne({ email: trimmedEmail });
-    if (user && await verifyPassword(password, user.password_hash)) {
-      req.session.userId = user._id.toString();
-      setFlash(req, 'success', `Welcome back, ${user.name}!`);
-      const returnTo = req.session.returnTo || '/';
-      delete req.session.returnTo;
-      return res.redirect(returnTo);
-    }
-
-    setFlash(req, 'danger', 'Invalid email or password.');
-    res.redirect('/login');
-  } catch (err) {
-    setFlash(req, 'danger', 'Login failed. Please try again.');
-    res.redirect('/login');
-  }
+// Login — redirect to dashboard (auth bypassed)
+router.post('/login', (req, res) => {
+  res.redirect('/');
 });
 
-// Logout
+// Logout — redirect to dashboard (auth bypassed)
 router.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
+  res.redirect('/');
 });
 
 module.exports = router;
