@@ -1,12 +1,10 @@
 const express = require('express');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
-const { connect, client } = require('./db');
 const { flashMessages } = require('./middleware');
 
 const app = express();
@@ -55,22 +53,34 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 
-app.use(session({
+// Session store — set up after MongoDB connects via setSessionStore()
+let sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    collectionName: 'sessions',
-    ttl: 7 * 24 * 60 * 60, // 7 days
-  }),
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
-}));
+});
+
+function setSessionStore(store) {
+  sessionMiddleware = session({
+    secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
+    resave: false,
+    saveUninitialized: false,
+    store,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  });
+}
+app.use((req, res, next) => sessionMiddleware(req, res, next));
 
 // ═══════════════════════════════════════════════════════════════
 // VIEW ENGINE
@@ -130,19 +140,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// ═══════════════════════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════════════════════
-async function start() {
-  await connect();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`MailForge running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-start().catch(err => {
-  console.error('Failed to start:', err);
-  process.exit(1);
-});
-
-module.exports = app;
+module.exports = { app, setSessionStore };

@@ -1,28 +1,30 @@
 const { MongoClient } = require('mongodb');
 
 const MONGODB_URI = process.env.MONGODB_URI;
+
 if (!MONGODB_URI) {
-  throw new Error('MONGODB_URI environment variable is not set');
+  console.warn('WARNING: MONGODB_URI environment variable is not set. Database operations will fail.');
 }
 
-const client = new MongoClient(MONGODB_URI);
-const db = client.db('mailforge');
+const client = MONGODB_URI ? new MongoClient(MONGODB_URI) : null;
+const db = client ? client.db('mailforge') : null;
 
-// Collections
-const users = db.collection('users');
-const workspaces = db.collection('workspaces');
-const domains = db.collection('domains');
-const senderIdentities = db.collection('sender_identities');
-const apiKeys = db.collection('api_keys');
-const emails = db.collection('emails');
-const emailEvents = db.collection('email_events');
-const templates = db.collection('templates');
-const webhooks = db.collection('webhooks');
-const webhookLogs = db.collection('webhook_logs');
-const rateLimits = db.collection('rate_limits');
+// Collections (will be null if MongoDB is not connected)
+const users = db ? db.collection('users') : null;
+const workspaces = db ? db.collection('workspaces') : null;
+const domains = db ? db.collection('domains') : null;
+const senderIdentities = db ? db.collection('sender_identities') : null;
+const apiKeys = db ? db.collection('api_keys') : null;
+const emails = db ? db.collection('emails') : null;
+const emailEvents = db ? db.collection('email_events') : null;
+const templates = db ? db.collection('templates') : null;
+const webhooks = db ? db.collection('webhooks') : null;
+const webhookLogs = db ? db.collection('webhook_logs') : null;
+const rateLimits = db ? db.collection('rate_limits') : null;
 
 // Create indexes
 async function ensureIndexes() {
+  if (!db) return;
   await users.createIndex({ email: 1 }, { unique: true });
   await workspaces.createIndex({ owner_id: 1 });
   await workspaces.createIndex({ slug: 1 }, { unique: true });
@@ -42,6 +44,10 @@ async function ensureIndexes() {
 }
 
 async function connect() {
+  if (!client) {
+    console.error('Cannot connect to MongoDB: MONGODB_URI not set.');
+    return;
+  }
   await client.connect();
   await ensureIndexes();
   console.log('Connected to MongoDB');

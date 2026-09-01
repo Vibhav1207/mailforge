@@ -1,16 +1,30 @@
 // Vercel Serverless entry point
-// Import the Express app for Vercel's serverless runtime
-const app = require('../src/app');
+// Connect to MongoDB on cold start, set up session store, handle requests
 
-// For Vercel serverless, we need to handle the MongoDB connection
-// differently — connect on cold start, reuse on warm invocations
+const MongoStore = require('connect-mongo');
+
 let isConnected = false;
+let app;
+
+async function init() {
+  if (isConnected) return;
+
+  const { connect } = require('../src/db');
+  await connect();
+
+  // Set up MongoStore session middleware after connection
+  const { app: expressApp, setSessionStore } = require('../src/app');
+  setSessionStore(MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 7 * 24 * 60 * 60,
+  }));
+
+  app = expressApp;
+  isConnected = true;
+}
 
 module.exports = async (req, res) => {
-  if (!isConnected) {
-    const { connect } = require('../src/db');
-    await connect();
-    isConnected = true;
-  }
+  await init();
   return app(req, res);
 };
