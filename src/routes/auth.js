@@ -10,48 +10,10 @@ router.get('/login', (req, res) => {
   res.render('login', { flash: req.session.flash || {} });
 });
 
-// Register
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, confirm_password } = req.body;
-    const trimmedName = (name || '').trim();
-    const trimmedEmail = (email || '').trim().toLowerCase();
-    const trimmedPass = password || '';
-
-    if (!trimmedName || !trimmedEmail || !trimmedPass) {
-      setFlash(req, 'danger', 'All fields are required.');
-      return res.redirect('/login');
-    }
-    if (trimmedPass !== confirm_password) {
-      setFlash(req, 'danger', 'Passwords do not match.');
-      return res.redirect('/login');
-    }
-    if (trimmedPass.length < 8) {
-      setFlash(req, 'danger', 'Password must be at least 8 characters.');
-      return res.redirect('/login');
-    }
-
-    const existing = await users.findOne({ email: trimmedEmail });
-    if (existing) {
-      setFlash(req, 'danger', 'An account with this email already exists.');
-      return res.redirect('/login');
-    }
-
-    const result = await users.insertOne({
-      name: trimmedName,
-      email: trimmedEmail,
-      password_hash: await hashPassword(trimmedPass),
-      email_verified: true,
-      created_at: new Date()
-    });
-
-    req.session.userId = result.insertedId.toString();
-    setFlash(req, 'success', `Welcome, ${trimmedName}! Your workspace is ready.`);
-    res.redirect('/');
-  } catch (err) {
-    setFlash(req, 'danger', 'Registration failed. Please try again.');
-    res.redirect('/login');
-  }
+// Register — disabled for now
+router.post('/register', (req, res) => {
+  setFlash(req, 'danger', 'Registration is currently disabled.');
+  res.redirect('/login');
 });
 
 // Login
