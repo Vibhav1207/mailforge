@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: Check if user owns the document being accessed
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function: Validate ownership in document data
+    function dataOwner() {
+      return resource.data.userId == request.auth.uid;
+    }
+
+    // Helper function: Validate ownership when creating document
+    function incomingDataOwner() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+
+    // 1. Users collection: user can only read and update their own profile document
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Disallow accidental user deletion via client
+    }
+
+    // 2. Contacts collection: strict per-user ownership
+    match /contacts/{contactId} {
+      allow read: if isAuthenticated() && dataOwner();
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update: if isAuthenticated() && dataOwner() && incomingDataOwner();
+      allow delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 3. Contact Lists collection
+    match /contactLists/{listId} {
+      allow read: if isAuthenticated() && dataOwner();
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update: if isAuthenticated() && dataOwner() && incomingDataOwner();
+      allow delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 4. Campaigns collection
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated() && dataOwner();
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update: if isAuthenticated() && dataOwner() && incomingDataOwner();
+      allow delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 5. Campaign Recipients collection: read-only for client, managed server-side
+    match /campaignRecipients/{recipientId} {
+      allow read: if isAuthenticated() && dataOwner();
+      // Write operations are reserved for authenticated server Admin SDK or owner creation
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update, delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 6. Email Templates collection
+    match /emailTemplates/{templateId} {
+      // System templates (userId == null or userId == "system") can be read by all authenticated users
+      allow read: if isAuthenticated() && (resource.data.userId == null || resource.data.userId == "system" || dataOwner());
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update: if isAuthenticated() && dataOwner() && incomingDataOwner();
+      allow delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 7. Email Events: Audit log of delivery events
+    match /emailEvents/{eventId} {
+      allow read: if isAuthenticated() && dataOwner();
+      // Events are written by server webhook or backend operations
+      allow write: if false;
+    }
+
+    // 8. Suppression Lists
+    match /suppressionLists/{suppressionId} {
+      allow read: if isAuthenticated() && dataOwner();
+      allow create: if isAuthenticated() && incomingDataOwner();
+      allow update, delete: if isAuthenticated() && dataOwner();
+    }
+
+    // 9. Scheduled Jobs: managed strictly by backend
+    match /scheduledJobs/{jobId} {
+      allow read: if isAuthenticated() && dataOwner();
+      allow write: if false; // Server-side execution only
+    }
+  }
+}

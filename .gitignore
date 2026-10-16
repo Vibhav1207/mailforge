@@ -1,24 +1,31 @@
-# Environment variables
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environment files
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Node.js
-node_modules/
+# Vercel
+.vercel
 
-# Python (legacy)
-__pycache__/
-*.py[cod]
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
-.idea/
-
-# Vercel
-.vercel/
-
-# Old files
-instance/
-static/uploads/
+# Legacy
+_legacy_express/

@@ -1,28 +1,41 @@
 {
   "name": "mailforge",
-  "version": "2.0.0",
-  "description": "Developer email infrastructure platform — Resend-style email API",
-  "main": "api/index.js",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Production-grade Bulk Email Sending Web Application with Firebase Google Auth & Resend",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "vercel-build": "echo 'No build step needed'"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "ejs": "^3.1.10",
-    "express-session": "^1.18.0",
-    "connect-mongo": "^5.1.0",
-    "mongodb": "^6.8.0",
-    "bcryptjs": "^2.4.3",
-    "nodemailer": "^6.9.0",
-    "helmet": "^8.0.0",
-    "express-rate-limit": "^7.4.0",
-    "csrf-csrf": "^3.0.6",
-    "cookie-parser": "^1.4.6",
-    "multer": "^1.4.5-lts.1",
-    "csv-parse": "^5.5.0",
-    "xlsx": "^0.18.5",
-    "dns2": "^2.1.0"
+    "@hookform/resolvers": "^3.10.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase": "^11.4.0",
+    "firebase-admin": "^13.1.0",
+    "lucide-react": "^0.475.0",
+    "mongodb": "^7.7.0",
+    "next": "^15.2.0",
+    "nodemailer": "^10.1.0",
+    "papaparse": "^5.5.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "svix": "^1.61.0",
+    "tailwind-merge": "^3.0.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.8",
+    "@types/nodemailer": "^8.0.2",
+    "@types/papaparse": "^5.3.15",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2"
   }
 }
