@@ -7,6 +7,7 @@ import { listOwned } from "@/lib/server/data";
 import { draftSchema } from "@/lib/server/validation";
 import { stripUndefined } from "@/lib/server/settings";
 import { ApiError } from "@/lib/server/errors";
+import { buildSafeOwnershipFilter, sanitizeMongoInput } from "@/lib/server/mongodb-security";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,23 +21,29 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireUser(req);
     const input = await parseJson(req, draftSchema, 900_000);
+    const cleanInput = sanitizeMongoInput(input);
 
     if (!isFirebaseAdminConfigured() && isMongoConfigured()) {
       const db = await getMongoDb();
-      const old = await db.collection("campaigns").findOne({ _id: input.id as any });
+      const filter = buildSafeOwnershipFilter(cleanInput.id, user.uid);
+      const old = await db.collection("campaigns").findOne(filter);
       if (old && (old as any).userId !== user.uid) throw new ApiError(404, "Campaign not found.", "NOT_FOUND");
       if (old && (old as any).status !== "draft") throw new ApiError(409, "Only draft campaigns can be edited.", "CAMPAIGN_ALREADY_QUEUED");
       const now = new Date().toISOString();
-      const count = input.draftRecipients?.length ?? input.recipientCount;
+      const count = cleanInput.draftRecipients?.length ?? cleanInput.recipientCount;
       const value = stripUndefined({
-        ...input,
+        ...cleanInput,
         userId: user.uid,
         recipientCount: count,
         stats: { total: count, sent: 0, delivered: 0, failed: 0, bounced: 0, unsubscribed: 0 },
         createdAt: (old as any)?.createdAt || now,
         updatedAt: now,
       });
-      await db.collection("campaigns").updateOne({ _id: input.id as any }, { $set: value }, { upsert: true });
+      await db.collection("campaigns").updateOne(
+        { _id: cleanInput.id as any, userId: user.uid },
+        { $set: value, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
       return json({ campaign: value });
     }
 

@@ -8,6 +8,7 @@ import { listOwned } from "@/lib/server/data";
 import { suppressionId } from "@/lib/server/suppression";
 import { stripUndefined } from "@/lib/server/settings";
 import { ApiError } from "@/lib/server/errors";
+import { buildSafeOwnershipFilter, sanitizeMongoInput } from "@/lib/server/mongodb-security";
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,19 +23,40 @@ export async function POST(req: NextRequest) {
     const user = await requireUser(req);
     const input = await parseJson(req, contactSchema, 150_000);
 
+    const cleanInput = sanitizeMongoInput(input);
+
     if (!isFirebaseAdminConfigured() && isMongoConfigured()) {
       const db = await getMongoDb();
-      const existing = await db.collection("contacts").findOne({ _id: input.id as any });
+      const filter = buildSafeOwnershipFilter(cleanInput.id, user.uid);
+      const existing = await db.collection("contacts").findOne(filter);
       if (existing && (existing as any).userId !== user.uid) throw new ApiError(404, "Contact not found.", "NOT_FOUND");
-      const suppression = await db.collection("suppressionLists").findOne({ _id: suppressionId(user.uid, input.email) as any });
+      const suppression = await db.collection("suppressionLists").findOne({ _id: suppressionId(user.uid, cleanInput.email) as any, userId: user.uid });
       const now = new Date().toISOString();
-      const status = suppression ? ((suppression as any).reason === "unsubscribe" ? "unsubscribed" : "suppressed") : input.status;
-      const value = stripUndefined({ ...input, status, userId: user.uid, createdAt: (existing as any)?.createdAt || now, updatedAt: now });
-      await db.collection("contacts").updateOne({ _id: input.id as any }, { $set: value }, { upsert: true });
+      const status = suppression ? ((suppression as any).reason === "unsubscribe" ? "unsubscribed" : "suppressed") : cleanInput.status;
+      const value = stripUndefined({
+        id: cleanInput.id,
+        email: cleanInput.email,
+        firstName: cleanInput.firstName,
+        lastName: cleanInput.lastName,
+        company: cleanInput.company,
+        customFields: cleanInput.customFields,
+        status,
+        listIds: cleanInput.listIds,
+        tags: cleanInput.tags,
+        suppressionReason: cleanInput.suppressionReason,
+        userId: user.uid,
+        createdAt: (existing as any)?.createdAt || now,
+        updatedAt: now,
+      });
+      await db.collection("contacts").updateOne(
+        { _id: cleanInput.id as any, userId: user.uid },
+        { $set: value, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
       if (status !== "active" && !suppression) {
         await db.collection("suppressionLists").updateOne(
-          { _id: suppressionId(user.uid, input.email) as any },
-          { $set: { userId: user.uid, email: input.email, reason: status === "unsubscribed" ? "unsubscribe" : "manual", note: input.suppressionReason || "", createdAt: now } },
+          { _id: suppressionId(user.uid, cleanInput.email) as any, userId: user.uid },
+          { $set: { userId: user.uid, email: cleanInput.email, reason: status === "unsubscribed" ? "unsubscribe" : "manual", note: cleanInput.suppressionReason || "", createdAt: now } },
           { upsert: true }
         );
       }

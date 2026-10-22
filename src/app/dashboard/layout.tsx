@@ -21,6 +21,8 @@ import {
   ChevronRight,
   User as UserIcon,
   Sparkles,
+  Globe,
+  Key,
 } from "lucide-react";
 
 const NAVIGATION_ITEMS = [
@@ -30,6 +32,8 @@ const NAVIGATION_ITEMS = [
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
   { name: "Email Templates", href: "/dashboard/templates", icon: FileCode2 },
   { name: "Sending History", href: "/dashboard/history", icon: History },
+  { name: "Domains", href: "/dashboard/domains", icon: Globe },
+  { name: "API Keys", href: "/dashboard/api-keys", icon: Key },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

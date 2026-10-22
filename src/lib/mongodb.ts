@@ -113,21 +113,25 @@ export async function saveTemplateImageToMongo(input: Omit<StoredTemplateImageDo
   return { ...metadata, id, url: `${appUrl()}/api/templates/images/${id}`, createdAt };
 }
 
-export async function getTemplateImagesFromMongo(userId: string, folder?: string) {
+export async function getTemplateImagesFromMongo(userId: string, folder?: string, limit = 50) {
+  const safeLimit = Math.min(Math.max(1, limit), 100);
   const db = await getMongoDb();
   const docs = await db.collection<StoredTemplateImageDoc>("template_images")
-    .find({ userId, ...(folder && folder !== "all" ? { folder } : {}) }, { projection: { data: 0, dataBase64: 0 } }).sort({ createdAt: -1 }).limit(1000).toArray();
-  return docs.map(({ _id, ...doc }) => ({ ...doc, id: _id.toHexString(), url: `${appUrl()}/api/templates/images/${_id.toHexString()}` }));
+    .find({ userId, ...(folder && folder !== "all" ? { folder } : {}) }, { projection: { data: 0, dataBase64: 0 } })
+    .sort({ createdAt: -1 })
+    .limit(safeLimit)
+    .toArray();
+  return docs.map(({ _id, ...doc }) => ({ ...doc, id: _id!.toHexString(), url: `${appUrl()}/api/templates/images/${_id!.toHexString()}` }));
 }
 
 export async function getTemplateImageByIdFromMongo(id: string) {
-  if (!ObjectId.isValid(id)) return null;
+  if (typeof id !== "string" || !/^[0-9a-fA-F]{24}$/.test(id.trim())) return null;
   const db = await getMongoDb();
-  return db.collection<StoredTemplateImageDoc>("template_images").findOne({ _id: new ObjectId(id) });
+  return db.collection<StoredTemplateImageDoc>("template_images").findOne({ _id: new ObjectId(id.trim()) });
 }
 
 export async function deleteTemplateImageFromMongo(id: string, userId: string) {
-  if (!ObjectId.isValid(id)) return false;
+  if (typeof id !== "string" || !/^[0-9a-fA-F]{24}$/.test(id.trim()) || typeof userId !== "string" || !userId.trim()) return false;
   const db = await getMongoDb();
-  return (await db.collection("template_images").deleteOne({ _id: new ObjectId(id), userId })).deletedCount === 1;
+  return (await db.collection("template_images").deleteOne({ _id: new ObjectId(id.trim()), userId: userId.trim() })).deletedCount === 1;
 }

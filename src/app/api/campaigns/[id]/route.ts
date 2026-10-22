@@ -8,6 +8,7 @@ import { idSchema } from "@/lib/server/validation";
 import { getOwned } from "@/lib/server/data";
 import { cancelCampaign } from "@/lib/server/campaigns";
 import { ApiError } from "@/lib/server/errors";
+import { buildSafeOwnershipFilter } from "@/lib/server/mongodb-security";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -35,9 +36,13 @@ export async function DELETE(req: NextRequest, { params }: Context) {
 
     if (!isFirebaseAdminConfigured() && isMongoConfigured()) {
       const db = await getMongoDb();
-      const doc = await db.collection("campaigns").findOne({ _id: id as any });
+      const filter = buildSafeOwnershipFilter(id, user.uid);
+      const doc = await db.collection("campaigns").findOne(filter);
       if (!doc || (doc as any).userId !== user.uid) throw new ApiError(404, "Campaign not found.", "NOT_FOUND");
-      await db.collection("campaigns").deleteOne({ _id: id as any });
+      if (["running", "ready"].includes((doc as any)?.state) || ["queued", "sending", "scheduled"].includes((doc as any)?.status)) {
+        throw new ApiError(409, "Cancel this campaign before deleting it.", "CAMPAIGN_ACTIVE");
+      }
+      await db.collection("campaigns").deleteOne(filter);
       await db.collection("campaignRecipients").deleteMany({ campaignId: id, userId: user.uid });
       return json({ success: true });
     }

@@ -5,6 +5,8 @@ import { appUrl } from "@/lib/server/config";
 import { emailSchema, headerSchema } from "@/lib/server/validation";
 import { createSmtpTransport, smtpError } from "./smtp";
 import { emailLinkUrl, signEmailLink, safeHttpUrl, type EmailLink } from "./links";
+import { getDomainDkim } from "@/lib/server/domains";
+import { assertVerifiedSenderDomain } from "@/lib/server/domain-verifier";
 
 export interface SendSingleEmailParams {
   to: string;
@@ -90,6 +92,32 @@ export function renderEmail(params: SendSingleEmailParams) {
 
 export async function sendSingleEmail(params: SendSingleEmailParams): Promise<SendEmailResult> {
   const message = renderEmail(params);
+
+  // If using a custom sending domain, assert verification in production
+  if (process.env.NODE_ENV === "production") {
+    const isDomainVerified = await assertVerifiedSenderDomain(params.fromEmail);
+    if (!isDomainVerified) {
+      return {
+        success: false,
+        error: `Sending domain for "${params.fromEmail}" is unverified. Please add and verify it in the MailForge Domains dashboard.`,
+        isTransient: false,
+      };
+    }
+  }
+
+  // Check if native MailForge DKIM signing key exists for this domain
+  const senderDomain = params.fromEmail.split("@")[1]?.toLowerCase();
+  if (senderDomain) {
+    const dkim = await getDomainDkim(senderDomain);
+    if (dkim) {
+      (message as any).dkim = {
+        domainName: dkim.domain,
+        keySelector: dkim.selector,
+        privateKey: dkim.privateKey,
+      };
+    }
+  }
+
   let transport;
   try {
     transport = await createSmtpTransport(params.smtpConfig);

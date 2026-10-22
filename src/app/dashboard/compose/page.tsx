@@ -154,7 +154,7 @@ export default function ComposeEmailPage() {
       if (profile.settings.defaultFromName && fromName === "MailForge Team") {
         setFromName(profile.settings.defaultFromName);
       }
-      if (profile.settings.defaultFromEmail && (!fromEmail || fromEmail === "onboarding@resend.dev")) {
+      if (profile.settings.defaultFromEmail && (!fromEmail || fromEmail === "noreply@mailforge.app" || fromEmail === "onboarding@resend.dev")) {
         setFromEmail(profile.settings.defaultFromEmail);
       } else if (!fromEmail && (profile.settings.gmail?.email || profile.settings.smtp?.user)) {
         setFromEmail(profile.settings.gmail?.email || profile.settings.smtp?.user || "");

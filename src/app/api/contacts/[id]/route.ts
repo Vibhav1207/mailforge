@@ -5,6 +5,7 @@ import { getMongoDb, isMongoConfigured } from "@/lib/mongodb";
 import { apiError, json } from "@/lib/server/api";
 import { idSchema } from "@/lib/server/validation";
 import { ApiError } from "@/lib/server/errors";
+import { buildSafeOwnershipFilter } from "@/lib/server/mongodb-security";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,9 +14,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     if (!isFirebaseAdminConfigured() && isMongoConfigured()) {
       const db = await getMongoDb();
-      const doc = await db.collection("contacts").findOne({ _id: id as any });
+      const filter = buildSafeOwnershipFilter(id, user.uid);
+      const doc = await db.collection("contacts").findOne(filter);
       if (!doc || (doc as any).userId !== user.uid) throw new ApiError(404, "Contact not found.", "NOT_FOUND");
-      await db.collection("contacts").deleteOne({ _id: id as any });
+      await db.collection("contacts").deleteOne(filter);
       return json({ success: true });
     }
 
