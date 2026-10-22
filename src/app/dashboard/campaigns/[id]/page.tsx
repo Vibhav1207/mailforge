@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { getCampaignById, saveCampaign, getCampaignRecipients } from "@/lib/store/db-service";
+import { apiFetch } from "@/lib/api-client";
 import { Campaign, CampaignRecipient } from "@/types";
 import { formatDate, formatNumber } from "@/lib/utils";
 import {
@@ -68,7 +69,7 @@ export default function CampaignDetailPage() {
 
     setRetrying(true);
     try {
-      const res = await fetch(`/api/campaigns/${campaign.id}/retry`, {
+      const res = await apiFetch(`/api/campaigns/${campaign.id}/retry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

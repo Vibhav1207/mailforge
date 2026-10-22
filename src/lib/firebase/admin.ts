@@ -1,46 +1,37 @@
-import * as admin from "firebase-admin";
+import { cert, getApps, initializeApp, applicationDefault } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { configured } from "@/lib/server/config";
+import { ApiError } from "@/lib/server/errors";
 
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-if (privateKey) {
-  // Handle escaped \n in environment variables
-  privateKey = privateKey.replace(/\\n/g, "\n");
+export function isFirebaseAdminConfigured(): boolean {
+  return Boolean(configured(process.env.FIREBASE_PROJECT_ID) &&
+    ((configured(process.env.FIREBASE_CLIENT_EMAIL) && configured(process.env.FIREBASE_PRIVATE_KEY)) ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      (process.env.NODE_ENV !== "production" && process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIRESTORE_EMULATOR_HOST)));
 }
 
-export const isFirebaseAdminConfigured = Boolean(
-  projectId &&
-  projectId !== "mailforge-prod" &&
-  clientEmail &&
-  privateKey &&
-  !privateKey.includes("MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC6example")
-);
-
-function initAdmin(): admin.app.App | null {
-  if (admin.apps.length > 0) {
-    return admin.apps[0]!;
+function adminApp() {
+  const existing = getApps().find((app) => app.name === "mailforge");
+  if (existing) return existing;
+  if (!isFirebaseAdminConfigured()) {
+    throw new ApiError(503, "Firebase Admin is not configured. Add the server service-account credentials.", "CONFIGURATION_REQUIRED");
   }
-
-  if (isFirebaseAdminConfigured && projectId && clientEmail && privateKey) {
-    try {
-      return admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-    } catch (err) {
-      console.error("Firebase Admin initialization error:", err);
-      return null;
-    }
+  if (process.env.NODE_ENV === "production" && (process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIRESTORE_EMULATOR_HOST)) {
+    throw new ApiError(503, "Firebase emulator configuration is not permitted in production.", "CONFIGURATION_REQUIRED");
   }
-
-  return null;
+  try {
+    const projectId = process.env.FIREBASE_PROJECT_ID!;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+    const emulator = process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.FIRESTORE_EMULATOR_HOST;
+    return initializeApp({
+      projectId,
+      ...(emulator ? {} : { credential: privateKey ? cert({ projectId, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey }) : applicationDefault() }),
+    }, "mailforge");
+  } catch {
+    throw new ApiError(503, "Firebase Admin credentials could not be initialized.", "CONFIGURATION_REQUIRED");
+  }
 }
 
-const adminApp = initAdmin();
-export const adminAuth = adminApp ? adminApp.auth() : null;
-export const adminDb = adminApp ? adminApp.firestore() : null;
-export { admin };
+export const getAdminAuth = () => getAuth(adminApp());
+export const getAdminDb = () => getFirestore(adminApp());

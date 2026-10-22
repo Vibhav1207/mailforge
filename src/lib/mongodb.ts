@@ -1,174 +1,133 @@
-import { MongoClient, Db, ObjectId, GridFSBucket } from "mongodb";
+import dns from "node:dns";
+import { Binary, MongoClient, ObjectId, type Db } from "mongodb";
+import { appUrl, configured } from "@/lib/server/config";
+import { ApiError } from "@/lib/server/errors";
 
-const uri = process.env.MONGODB_URI || process.env.MONGO_URL || "mongodb://127.0.0.1:27017/mailforge";
-
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
-declare global {
-  // eslint-disable-next-line no-var
-  var _mongoClientPromise: Promise<MongoClient> | undefined;
+// Set reliable public DNS servers for SRV resolution if local DNS refuses SRV queries
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {
+  // Ignore in restricted environments
 }
+
+interface MongoCache { uri: string; promise: Promise<MongoClient> }
+declare global { var mailforgeMongo: MongoCache | undefined; }
 
 export function isMongoConfigured(): boolean {
-  return Boolean(process.env.MONGODB_URI || process.env.MONGO_URL);
+  return configured(process.env.MONGODB_URI || process.env.MONGO_URL);
 }
 
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable so the MongoClient is not repeatedly instantiated
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, {
-      connectTimeoutMS: 5000,
-      serverSelectionTimeoutMS: 5000,
-    });
-    global._mongoClientPromise = client.connect().catch((err) => {
-      console.warn("MongoDB connection notice (dev fallback active):", err.message);
-      return client;
-    });
+/**
+ * Fallback SRV resolver for environments where the local router/DNS refuses SRV records (ECONNREFUSED).
+ * Uses public DNS resolvers (8.8.8.8 and 1.1.1.1) to resolve cluster hostnames and replicaSet attributes.
+ */
+async function resolveMongoUri(uri: string): Promise<string> {
+  if (!uri.startsWith("mongodb+srv://")) return uri;
+  try {
+    const resolver = new dns.promises.Resolver();
+    resolver.setServers(["8.8.8.8", "1.1.1.1"]);
+    const parsed = new URL(uri.replace("mongodb+srv://", "http://"));
+    const hostname = parsed.hostname;
+    const srvRecords = await resolver.resolveSrv(`_mongodb._tcp.${hostname}`);
+    if (srvRecords && srvRecords.length > 0) {
+      let txtRecords: string[][] = [];
+      try {
+        txtRecords = await resolver.resolveTxt(hostname);
+      } catch {
+        // TXT records are optional
+      }
+      const txtParams = txtRecords.flat().join("&");
+      const hosts = srvRecords.map((r) => `${r.name}:${r.port}`).join(",");
+      const auth = parsed.username
+        ? `${encodeURIComponent(decodeURIComponent(parsed.username))}:${encodeURIComponent(decodeURIComponent(parsed.password))}@`
+        : "";
+      const pathname = parsed.pathname || "";
+      const existingParams = parsed.search ? parsed.search.slice(1) : "";
+      const allParams = [txtParams, existingParams, "ssl=true"].filter(Boolean).join("&");
+      return `mongodb://${auth}${hosts}${pathname}?${allParams}`;
+    }
+  } catch (err) {
+    console.warn("MongoDB SRV custom DNS resolution fallback error:", (err as Error)?.message || err);
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  // In production mode, avoid global variable
-  client = new MongoClient(uri, {
-    connectTimeoutMS: 5000,
-    serverSelectionTimeoutMS: 5000,
-  });
-  clientPromise = client.connect().catch((err) => {
-    console.warn("MongoDB production connection notice:", err.message);
-    return client;
-  });
+  return uri;
 }
 
 export async function getMongoClient(): Promise<MongoClient> {
-  return await clientPromise;
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URL;
+  if (!uri || !isMongoConfigured()) throw new ApiError(503, "Configure MONGODB_URI to store templates and images.", "CONFIGURATION_REQUIRED");
+  if (!globalThis.mailforgeMongo || globalThis.mailforgeMongo.uri !== uri) {
+    const connectPromise = (async () => {
+      let targetUri = uri;
+      try {
+        targetUri = await resolveMongoUri(uri);
+      } catch {
+        // Fall back to original URI if resolution encountered an unexpected error
+      }
+      const client = new MongoClient(targetUri, {
+        connectTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 5000,
+        maxPoolSize: 10,
+        maxIdleTimeMS: 60_000,
+      });
+      try {
+        await client.connect();
+        const activeDb = process.env.MONGODB_DB_NAME ? client.db(process.env.MONGODB_DB_NAME) : client.db();
+        console.log(`\x1b[32m✔ [MongoDB] Successfully connected to database: "${activeDb.databaseName}"\x1b[0m`);
+        return client;
+      } catch (err: unknown) {
+        console.error(`\x1b[31m✖ [MongoDB] Connection failed:\x1b[0m`, (err as Error)?.message || err);
+        globalThis.mailforgeMongo = undefined;
+        await client.close().catch(() => {});
+        throw new ApiError(503, `MongoDB is unavailable: ${(err as Error)?.message || "Check connection and access settings"}`, "DATABASE_UNAVAILABLE");
+      }
+    })();
+
+    globalThis.mailforgeMongo = { uri, promise: connectPromise };
+  }
+  return globalThis.mailforgeMongo.promise;
 }
 
-export async function getMongoDb(dbName?: string): Promise<Db> {
-  const c = await getMongoClient();
-  return c.db(dbName || "mailforge");
+export async function getMongoDb(): Promise<Db> {
+  const client = await getMongoClient();
+  return process.env.MONGODB_DB_NAME ? client.db(process.env.MONGODB_DB_NAME) : client.db();
 }
 
 export interface StoredTemplateImageDoc {
   _id?: ObjectId;
   userId: string;
-  folder: string; // e.g. "General", "Newsletters", "Banners", "Promotions"
+  folder: string;
   filename: string;
   contentType: string;
   size: number;
-  dataBase64: string; // Base64 image data for fast zero-config rendering
-  url?: string;
+  data?: Binary;
+  dataBase64?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-/**
- * Save an uploaded image into MongoDB's template_images collection
- */
-export async function saveTemplateImageToMongo(params: {
-  userId: string;
-  folder?: string;
-  filename: string;
-  contentType: string;
-  size: number;
-  dataBase64: string;
-}): Promise<{ id: string; url: string; folder: string; filename: string }> {
+export async function saveTemplateImageToMongo(input: Omit<StoredTemplateImageDoc, "_id" | "data" | "dataBase64" | "createdAt"> & { bytes: Buffer }) {
+  const { bytes, ...metadata } = input;
+  const createdAt = new Date().toISOString();
   const db = await getMongoDb();
-  const collection = db.collection<StoredTemplateImageDoc>("template_images");
-
-  const folder = (params.folder || "general").trim();
-  const docToInsert: StoredTemplateImageDoc = {
-    userId: params.userId,
-    folder,
-    filename: params.filename,
-    contentType: params.contentType,
-    size: params.size,
-    dataBase64: params.dataBase64,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const result = await collection.insertOne(docToInsert as any);
-  const id = result.insertedId.toString();
-  const url = `/api/templates/images/${id}`;
-
-  await collection.updateOne({ _id: result.insertedId }, { $set: { url } });
-
-  return {
-    id,
-    url,
-    folder,
-    filename: params.filename,
-  };
+  const result = await db.collection<StoredTemplateImageDoc>("template_images").insertOne({ ...metadata, data: new Binary(bytes), createdAt });
+  const id = result.insertedId.toHexString();
+  return { ...metadata, id, url: `${appUrl()}/api/templates/images/${id}`, createdAt };
 }
 
-/**
- * Retrieve user's template images from MongoDB, optionally filtered by folder
- */
-export async function getTemplateImagesFromMongo(
-  userId: string,
-  folder?: string
-): Promise<Array<{ id: string; filename: string; folder: string; contentType: string; size: number; url: string; createdAt: string }>> {
-  try {
-    const db = await getMongoDb();
-    const collection = db.collection<StoredTemplateImageDoc>("template_images");
-
-    const query: any = { userId };
-    if (folder && folder !== "all") {
-      query.folder = folder;
-    }
-
-    const docs = await collection
-      .find(query)
-      .project({ _id: 1, userId: 1, folder: 1, filename: 1, contentType: 1, size: 1, url: 1, createdAt: 1 })
-      .sort({ createdAt: -1 })
-      .toArray();
-
-    return docs.map((d) => ({
-      id: d._id.toString(),
-      filename: d.filename,
-      folder: d.folder || "general",
-      contentType: d.contentType,
-      size: d.size,
-      url: d.url || `/api/templates/images/${d._id.toString()}`,
-      createdAt: d.createdAt,
-    }));
-  } catch (err: any) {
-    console.warn("MongoDB getTemplateImages notice:", err.message);
-    return [];
-  }
+export async function getTemplateImagesFromMongo(userId: string, folder?: string) {
+  const db = await getMongoDb();
+  const docs = await db.collection<StoredTemplateImageDoc>("template_images")
+    .find({ userId, ...(folder && folder !== "all" ? { folder } : {}) }, { projection: { data: 0, dataBase64: 0 } }).sort({ createdAt: -1 }).limit(1000).toArray();
+  return docs.map(({ _id, ...doc }) => ({ ...doc, id: _id.toHexString(), url: `${appUrl()}/api/templates/images/${_id.toHexString()}` }));
 }
 
-/**
- * Retrieve single template image by ID from MongoDB
- */
-export async function getTemplateImageByIdFromMongo(id: string): Promise<StoredTemplateImageDoc | null> {
-  try {
-    const db = await getMongoDb();
-    const collection = db.collection<StoredTemplateImageDoc>("template_images");
-
-    if (!ObjectId.isValid(id)) return null;
-    return await collection.findOne({ _id: new ObjectId(id) });
-  } catch (err: any) {
-    console.error("MongoDB getTemplateImageById error:", err);
-    return null;
-  }
+export async function getTemplateImageByIdFromMongo(id: string) {
+  if (!ObjectId.isValid(id)) return null;
+  const db = await getMongoDb();
+  return db.collection<StoredTemplateImageDoc>("template_images").findOne({ _id: new ObjectId(id) });
 }
 
-/**
- * Delete a template image by ID from MongoDB
- */
-export async function deleteTemplateImageFromMongo(id: string, userId: string): Promise<boolean> {
-  try {
-    const db = await getMongoDb();
-    const collection = db.collection<StoredTemplateImageDoc>("template_images");
-
-    if (!ObjectId.isValid(id)) return false;
-    const res = await collection.deleteOne({ _id: new ObjectId(id), userId });
-    return res.deletedCount > 0;
-  } catch (err: any) {
-    console.error("MongoDB deleteTemplateImage error:", err);
-    return false;
-  }
+export async function deleteTemplateImageFromMongo(id: string, userId: string) {
+  if (!ObjectId.isValid(id)) return false;
+  const db = await getMongoDb();
+  return (await db.collection("template_images").deleteOne({ _id: new ObjectId(id), userId })).deletedCount === 1;
 }
-
-export default clientPromise;

@@ -38,6 +38,10 @@ export default function HomePage() {
     } catch (err: any) {
       if (err?.code === "auth/popup-closed-by-user") {
         setAuthError("Sign-in popup was closed before completing.");
+      } else if (err?.code === "auth/configuration-not-found") {
+        setAuthError(
+          "Firebase Authentication is not enabled yet for project 'studio-8413591175-7c92a'. Go to Firebase Console > Authentication > Sign-in method, click 'Get Started', and enable the Google provider."
+        );
       } else {
         setAuthError(err?.message || "Google sign-in failed. Please verify Firebase settings.");
       }

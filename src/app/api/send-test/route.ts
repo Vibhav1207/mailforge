@@ -1,56 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyServerAuth, unauthorizedResponse } from "@/lib/firebase/auth-middleware";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/firebase/auth-middleware";
 import { sendEmailWithRetry } from "@/lib/email/provider";
+import { apiError, json, parseJson } from "@/lib/server/api";
+import { emailSchema, headerSchema, optionalEmailSchema, smtpSchema } from "@/lib/server/validation";
+import { resolveSmtp } from "@/lib/server/settings";
+import { rateLimit } from "@/lib/server/rate-limit";
+import { ApiError } from "@/lib/server/errors";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+const schema = z.object({
+  to: emailSchema.optional(), subject: headerSchema.default("Email Preview"),
+  htmlContent: z.string().min(1).max(300_000), textContent: z.string().max(300_000).optional(),
+  fromName: headerSchema.default("MailForge Preview"), fromEmail: optionalEmailSchema,
+  replyTo: optionalEmailSchema, smtpConfig: smtpSchema.optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await verifyServerAuth(req);
-    if (!user) {
-      return unauthorizedResponse();
-    }
-
-    const body = await req.json();
-    const { subject, htmlContent, textContent, fromName, fromEmail, replyTo, to, smtpConfig } = body;
-
-    const targetRecipient = to || user.email;
-    if (!targetRecipient) {
-      return NextResponse.json({ error: "Missing recipient email address" }, { status: 400 });
-    }
-
+    const user = await requireUser(req);
+    const input = await parseJson(req, schema, 650_000);
+    const to = input.to || user.email;
+    if (to !== user.email) throw new ApiError(400, "Test messages can only be sent to your signed-in email address.", "INVALID_TEST_RECIPIENT");
+    await rateLimit(user.uid, "send-test", 5);
+    const smtp = await resolveSmtp(user, input.smtpConfig);
+    const fromEmail = input.fromEmail || (smtp.host === "smtp.gmail.com" ? smtp.user : process.env.FROM_EMAIL || user.email);
+    if (smtp.host === "smtp.gmail.com" && fromEmail.toLowerCase() !== smtp.user.toLowerCase()) throw new ApiError(400, "The From address must match the connected Gmail account.", "INVALID_SENDER");
     const result = await sendEmailWithRetry({
-      to: targetRecipient,
-      subject: `[TEST] ${subject || "Email Preview"}`,
-      html: htmlContent || "<p>This is a test email from MailForge.</p>",
-      text: textContent,
-      fromName: fromName || "MailForge Preview",
-      fromEmail: fromEmail || smtpConfig?.user || user.email || "",
-      replyTo,
-      smtpConfig,
-      variables: {
-        firstName: user.name?.split(" ")[0] || "Recipient",
-        lastName: user.name?.split(" ")[1] || "",
-        company: "",
-        email: targetRecipient,
-      },
-    });
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Failed to deliver test message" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      providerMessageId: result.providerMessageId,
-      sentTo: targetRecipient,
-    });
-  } catch (err: any) {
-    console.error("Send test route error:", err);
-    return NextResponse.json(
-      { error: err?.message || "Internal server error" },
-      { status: 500 }
-    );
-  }
+      to, subject: `[TEST] ${input.subject}`, html: input.htmlContent, text: input.textContent,
+      fromName: input.fromName, fromEmail, replyTo: input.replyTo, smtpConfig: smtp,
+      variables: { firstName: user.name?.split(" ")[0] || "Recipient", lastName: user.name?.split(" ").slice(1).join(" ") || "", company: "" },
+    }, 0);
+    if (!result.success) throw new ApiError(502, result.error || "The mail server did not accept the message.", result.ambiguous ? "DELIVERY_UNKNOWN" : "SMTP_SEND_FAILED");
+    return json({ success: true, providerMessageId: result.providerMessageId, sentTo: to });
+  } catch (error) { return apiError(error); }
 }

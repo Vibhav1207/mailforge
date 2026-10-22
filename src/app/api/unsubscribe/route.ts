@@ -1,53 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase/admin";
-import { isValidEmail } from "@/lib/utils";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { readEmailLink } from "@/lib/email/links";
+import { apiError, json, parseJson, readBody } from "@/lib/server/api";
+import { emailSchema } from "@/lib/server/validation";
+import { unsubscribeRecipient } from "@/lib/server/unsubscribe";
+import { ApiError } from "@/lib/server/errors";
+
+const schema = z.object({ token: z.string().min(1).max(6000), email: emailSchema.optional() });
+
+export async function GET(req: NextRequest) {
+  try {
+    const link = readEmailLink(req.nextUrl.searchParams.get("token") || "", "unsubscribe");
+    // A GET only displays preferences: mail scanners must not unsubscribe recipients.
+    return json({ email: link.email });
+  } catch (error) { return apiError(error); }
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, campaignId, reason } = await req.json();
-
-    if (!email || !isValidEmail(email)) {
-      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    const queryToken = req.nextUrl.searchParams.get("token");
+    let token: string;
+    let email: string | undefined;
+    if (queryToken && req.headers.get("content-type")?.startsWith("application/x-www-form-urlencoded")) {
+      const body = new URLSearchParams(Buffer.from(await readBody(req, 1000)).toString("utf8"));
+      if (body.get("List-Unsubscribe") !== "One-Click") throw new ApiError(400, "Invalid one-click unsubscribe request.", "INVALID_REQUEST");
+      token = queryToken;
+    } else {
+      const input = await parseJson(req, schema, 8000);
+      token = input.token;
+      email = input.email;
     }
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    // If Admin DB is available, update contacts and suppression list
-    if (adminDb) {
-      // Find contacts with this email and mark unsubscribed
-      const contactsSnap = await adminDb
-        .collection("contacts")
-        .where("email", "==", cleanEmail)
-        .get();
-
-      const batch = adminDb.batch();
-      contactsSnap.forEach((doc) => {
-        batch.update(doc.ref, {
-          status: "unsubscribed",
-          suppressionReason: reason || "User clicked unsubscribe",
-          updatedAt: new Date().toISOString(),
-        });
-      });
-
-      // Add to suppression lists
-      const supRef = adminDb.collection("suppressionLists").doc();
-      batch.set(supRef, {
-        email: cleanEmail,
-        campaignId: campaignId || null,
-        reason: "unsubscribe",
-        note: reason || "Direct unsubscribe request",
-        createdAt: new Date().toISOString(),
-      });
-
-      await batch.commit();
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `${cleanEmail} has been successfully unsubscribed.`,
-    });
-  } catch (err: any) {
-    console.error("Unsubscribe API error:", err);
-    return NextResponse.json({ error: "Failed to process unsubscribe" }, { status: 500 });
-  }
+    const link = readEmailLink(token, "unsubscribe");
+    if (email && email !== link.email) throw new ApiError(400, "This link belongs to a different email address.", "INVALID_EMAIL_LINK");
+    await unsubscribeRecipient(link);
+    return json({ success: true, message: "You have been unsubscribed from this sender." });
+  } catch (error) { return apiError(error); }
 }

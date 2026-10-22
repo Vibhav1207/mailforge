@@ -1,117 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyServerAuth, unauthorizedResponse } from "@/lib/firebase/auth-middleware";
-import { getMongoDb, isMongoConfigured } from "@/lib/mongodb";
-import { EmailTemplate } from "@/types";
+import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
+import { ObjectId } from "mongodb";
+import { requireUser } from "@/lib/firebase/auth-middleware";
+import { getMongoDb } from "@/lib/mongodb";
+import { apiError, json, parseJson } from "@/lib/server/api";
+import { folderSchema, templateSchema } from "@/lib/server/validation";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await verifyServerAuth(req);
-    if (!user) {
-      return unauthorizedResponse();
-    }
-
-    const { searchParams } = new URL(req.url);
-    const folder = searchParams.get("folder");
-
-    let templates: EmailTemplate[] = [];
-
-    if (isMongoConfigured()) {
-      try {
-        const db = await getMongoDb();
-        const collection = db.collection("email_templates");
-        const query: any = { userId: user.uid };
-        if (folder && folder !== "all") {
-          query.folder = folder;
-        }
-
-        const docs = await collection.find(query).sort({ createdAt: -1 }).toArray();
-        templates = docs.map((d: any) => ({
-          id: d._id.toString(),
-          userId: d.userId,
-          name: d.name,
-          subject: d.subject,
-          category: d.category || "custom",
-          description: d.description || "",
-          imageUrl: d.imageUrl || undefined,
-          folder: d.folder || "general",
-          htmlContent: d.htmlContent,
-          textContent: d.textContent || "",
-          createdAt: d.createdAt,
-        }));
-      } catch (mongoErr: any) {
-        console.warn("MongoDB templates fetch warning:", mongoErr.message);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      templates,
-      mongoConnected: isMongoConfigured(),
-    });
-  } catch (err: any) {
-    console.error("Templates API GET error:", err);
-    return NextResponse.json(
-      { error: err?.message || "Failed to fetch templates" },
-      { status: 500 }
-    );
-  }
+    const user = await requireUser(req);
+    const folder = req.nextUrl.searchParams.get("folder");
+    const db = await getMongoDb();
+    const docs = await db.collection("email_templates").find({ userId: user.uid, ...(folder && folder !== "all" ? { folder: folderSchema.parse(folder) } : {}) }).sort({ createdAt: -1 }).limit(1000).toArray();
+    return json({ templates: docs.map(({ _id, ...doc }) => ({ ...doc, id: doc.id || _id.toHexString() })), mongoConnected: true });
+  } catch (error) { return apiError(error); }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await verifyServerAuth(req);
-    if (!user) {
-      return unauthorizedResponse();
-    }
-
-    const body = await req.json();
-    const { id, name, subject, category, description, imageUrl, folder, htmlContent, textContent } = body;
-
-    if (!name || !subject || !htmlContent) {
-      return NextResponse.json(
-        { error: "Missing required fields (name, subject, htmlContent)" },
-        { status: 400 }
-      );
-    }
-
-    const templateData: EmailTemplate = {
-      id: id || `tpl_${Date.now()}`,
-      userId: user.uid,
-      name,
-      subject,
-      category: category || "custom",
-      description: description || "",
-      imageUrl: imageUrl || undefined,
-      folder: folder || "general",
-      htmlContent,
-      textContent: textContent || "",
-      createdAt: new Date().toISOString(),
-    };
-
-    if (isMongoConfigured()) {
-      try {
-        const db = await getMongoDb();
-        const collection = db.collection("email_templates");
-        await collection.updateOne(
-          { id: templateData.id, userId: user.uid },
-          { $set: templateData },
-          { upsert: true }
-        );
-      } catch (mongoErr: any) {
-        console.warn("MongoDB template save warning:", mongoErr.message);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      template: templateData,
-      message: "Template saved successfully",
-    });
-  } catch (err: any) {
-    console.error("Templates API POST error:", err);
-    return NextResponse.json(
-      { error: err?.message || "Failed to save template" },
-      { status: 500 }
-    );
-  }
+    const user = await requireUser(req);
+    const input = await parseJson(req, templateSchema, 650_000);
+    const id = input.id || `tpl_${randomUUID()}`;
+    const collection = (await getMongoDb()).collection("email_templates");
+    const filter = { userId: user.uid, $or: [{ id }, ...(ObjectId.isValid(id) ? [{ _id: new ObjectId(id) }] : [])] };
+    const now = new Date().toISOString();
+    const template = await collection.findOneAndUpdate(filter, {
+      $set: { ...input, id, userId: user.uid, updatedAt: now }, $setOnInsert: { createdAt: now },
+    }, { upsert: true, returnDocument: "after" });
+    const { _id: _unused, ...saved } = template!;
+    return json({ success: true, template: saved });
+  } catch (error) { return apiError(error); }
 }

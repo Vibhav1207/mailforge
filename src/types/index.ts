@@ -44,6 +44,7 @@ export interface CampaignStats {
   unsubscribed: number;
   opened?: number;
   clicked?: number;
+  suppressed?: number;
 }
 
 export interface Campaign {
@@ -66,6 +67,9 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;
+  trackOpens?: boolean;
+  trackClicks?: boolean;
+  draftRecipients?: Array<{ id?: string; email: string; firstName?: string; lastName?: string; company?: string; customFields?: Record<string, string> }>;
 }
 
 export type RecipientStatus =
@@ -74,7 +78,10 @@ export type RecipientStatus =
   | "sent"
   | "delivered"
   | "bounced"
-  | "failed";
+  | "failed"
+  | "suppressed"
+  | "unknown"
+  | "cancelled";
 
 export interface CampaignRecipient {
   id: string;
@@ -95,6 +102,9 @@ export interface CampaignRecipient {
   clickedAt?: string | null;
   openCount?: number;
   clickCount?: number;
+  retryable?: boolean;
+  nextAttemptAt?: string | null;
+  unsubscribedAt?: string | null;
 }
 
 export interface EmailTemplate {
@@ -141,12 +151,14 @@ export interface SmtpConfig {
   secure: boolean;
   user: string;
   pass: string;
+  hasPassword?: boolean;
 }
 
 export interface GmailConfig {
   email: string;
   appPassword?: string;
   isConnected?: boolean;
+  hasAppPassword?: boolean;
 }
 
 export interface UserSettings {

@@ -10,6 +10,7 @@ import {
   saveCampaign,
   saveCampaignRecipients,
 } from "@/lib/store/db-service";
+import { apiFetch } from "@/lib/api-client";
 import { Contact, EmailTemplate, Campaign, CampaignRecipient } from "@/types";
 import {
   parseEmailList,
@@ -374,7 +375,7 @@ export default function ComposeEmailPage() {
     setSendingTest(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/send-test", {
+      const res = await apiFetch("/api/send-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -471,7 +472,7 @@ export default function ComposeEmailPage() {
     }
 
     try {
-      const res = await fetch("/api/campaigns/send", {
+      const res = await apiFetch("/api/campaigns/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, isFirebaseAdminConfigured } from "./admin";
+import { NextRequest } from "next/server";
+import { verifyFirebaseIdToken } from "./verify-token";
+import { ApiError } from "@/lib/server/errors";
 
 export interface AuthenticatedUser {
   uid: string;
@@ -8,58 +9,30 @@ export interface AuthenticatedUser {
   picture?: string;
 }
 
-export async function verifyServerAuth(req: NextRequest): Promise<AuthenticatedUser | null> {
-  const authHeader = req.headers.get("authorization");
-  let token: string | null = null;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    token = authHeader.substring(7).trim();
-  } else {
-    // Check cookie fallback
-    token = req.cookies.get("mf_auth_token")?.value || null;
-  }
+export async function requireUser(req: NextRequest): Promise<AuthenticatedUser> {
+  const token =
+    req.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1] ||
+    req.cookies.get("mf_auth_token")?.value;
 
   if (!token) {
-    return null;
+    throw new ApiError(401, "Please sign in to perform this operation.", "UNAUTHORIZED");
   }
 
-  // Real Firebase Admin verification
-  if (adminAuth && isFirebaseAdminConfigured) {
-    try {
-      const decoded = await adminAuth.verifyIdToken(token);
-      return {
-        uid: decoded.uid,
-        email: decoded.email || "",
-        name: decoded.name || undefined,
-        picture: decoded.picture || undefined,
-      };
-    } catch (err) {
-      console.error("Token verification failed:", err);
-      return null;
-    }
-  }
-
-  // If Admin is not yet configured with real service account key, decode the payload safely for dev
+  let decoded;
   try {
-    const parts = token.split(".");
-    if (parts.length === 3) {
-      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
-      if (payload.user_id || payload.sub) {
-        return {
-          uid: payload.user_id || payload.sub,
-          email: payload.email || "",
-          name: payload.name || undefined,
-          picture: payload.picture || undefined,
-        };
-      }
+    decoded = await verifyFirebaseIdToken(token);
+  } catch (error: any) {
+    const msg = error?.message || "";
+    if (/expired/i.test(msg)) {
+      throw new ApiError(401, "Your session has expired. Please sign in again.", "UNAUTHORIZED");
     }
-  } catch (e) {
-    console.warn("Fallback token decode error:", e);
+    throw new ApiError(401, "Your session is invalid. Please sign in again.", "UNAUTHORIZED");
   }
-
-  return null;
-}
-
-export function unauthorizedResponse(message = "Unauthorized: Please sign in to perform this operation") {
-  return NextResponse.json({ error: message, code: "UNAUTHORIZED" }, { status: 401 });
+  if (!decoded.email || !decoded.email_verified) {
+    throw new ApiError(403, "A verified email address is required.", "EMAIL_NOT_VERIFIED");
+  }
+  const email = decoded.email.toLowerCase();
+  const allowed = process.env.MAILFORGE_ALLOWED_EMAILS?.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (allowed?.length && !allowed.includes(email)) throw new ApiError(403, "This account does not have access to this workspace.", "FORBIDDEN");
+  return { uid: decoded.uid, email, name: decoded.name, picture: decoded.picture };
 }

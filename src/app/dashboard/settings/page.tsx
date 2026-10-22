@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { updateUserSettings } from "@/lib/store/db-service";
+import { apiFetch } from "@/lib/api-client";
 import { UserSettings, SmtpConfig, GmailConfig } from "@/types";
 import {
   Settings,
@@ -143,7 +144,7 @@ export default function SettingsPage() {
     const secure = isGmailMode ? true : smtpSecure || port === 465;
 
     try {
-      const res = await fetch("/api/smtp/verify", {
+      const res = await apiFetch("/api/smtp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -194,7 +195,7 @@ export default function SettingsPage() {
 
     try {
       const target = user?.email || profile?.email || userEmail;
-      const res = await fetch("/api/send-test", {
+      const res = await apiFetch("/api/send-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
