@@ -9,8 +9,7 @@ import {
   safeEscapeRegex,
   allowlistFields,
 } from "../src/lib/server/mongodb-security";
-import { generateSecureToken, hashToken } from "../src/lib/server/tokens";
-import { hashPassword } from "../src/app/api/auth/reset-password/route";
+import { generateSecureToken, hashToken, hashPassword } from "../src/lib/server/tokens";
 
 describe("MongoDB & NoSQL Injection Protection", () => {
   it("rejects MongoDB operator injection like $ne, $gt, $where, $regex", () => {
@@ -35,7 +34,7 @@ describe("MongoDB & NoSQL Injection Protection", () => {
   it("allows clean scalar fields and nested safe objects", () => {
     const safeData = {
       name: "Newsletter Template",
-      subject: "Welcome to MailForge",
+      subject: "Welcome to Postvane",
       tags: ["marketing", "welcome"],
       metadata: {
         theme: "dark",

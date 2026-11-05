@@ -8,10 +8,14 @@ import {
   getContacts,
   getTemplates,
   saveCampaign,
-  saveCampaignRecipients,
 } from "@/lib/store/db-service";
 import { apiFetch } from "@/lib/api-client";
-import { Contact, EmailTemplate, Campaign, CampaignRecipient } from "@/types";
+import { Contact, EmailTemplate, Campaign } from "@/types";
+import {
+  parseSpreadsheetFile,
+  SpreadsheetColumnDetection,
+  sanitizeFieldName,
+} from "@/lib/spreadsheet";
 import {
   parseEmailList,
   interpolateVariables,
@@ -47,11 +51,14 @@ import {
   MousePointerClick,
   Zap,
   Server,
+  FileSpreadsheet,
+  CheckCheck,
 } from "lucide-react";
 
 interface RecipientItem {
   id: string;
   email: string;
+  name?: string;
   firstName?: string;
   lastName?: string;
   company?: string;
@@ -67,7 +74,7 @@ export default function ComposeEmailPage() {
   // Composer Form State
   const [campaignName, setCampaignName] = useState("Product Announcement " + new Date().toLocaleDateString());
   const [subject, setSubject] = useState("");
-  const [fromName, setFromName] = useState(profile?.settings?.defaultFromName || "MailForge Team");
+  const [fromName, setFromName] = useState(profile?.settings?.defaultFromName || "Postvane Team");
   const [fromEmail, setFromEmail] = useState(
     profile?.settings?.defaultFromEmail ||
     profile?.settings?.gmail?.email ||
@@ -90,6 +97,13 @@ export default function ComposeEmailPage() {
   const [recipients, setRecipients] = useState<RecipientItem[]>([]);
   const [invalidAddresses, setInvalidAddresses] = useState<string[]>([]);
   const [duplicateCount, setDuplicateCount] = useState(0);
+
+  // Spreadsheet Upload State (.xlsx, .xls, .csv)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [detectedColumns, setDetectedColumns] = useState<SpreadsheetColumnDetection | null>(null);
+  const [discoveredCustomFields, setDiscoveredCustomFields] = useState<string[]>([]);
+  const [isParsingSpreadsheet, setIsParsingSpreadsheet] = useState(false);
+  const [spreadsheetError, setSpreadsheetError] = useState<string | null>(null);
 
   // Saved Contacts Picker
   const [savedContacts, setSavedContacts] = useState<Contact[]>([]);
@@ -151,10 +165,10 @@ export default function ComposeEmailPage() {
   // Update profile default sender values if changed
   useEffect(() => {
     if (profile?.settings) {
-      if (profile.settings.defaultFromName && fromName === "MailForge Team") {
+      if (profile.settings.defaultFromName && fromName === "Postvane Team") {
         setFromName(profile.settings.defaultFromName);
       }
-      if (profile.settings.defaultFromEmail && (!fromEmail || fromEmail === "noreply@mailforge.app" || fromEmail === "onboarding@resend.dev")) {
+      if (profile.settings.defaultFromEmail && (!fromEmail || fromEmail === "noreply@postvane.app" || fromEmail === "noreply@mailforge.app" || fromEmail === "onboarding@resend.dev")) {
         setFromEmail(profile.settings.defaultFromEmail);
       } else if (!fromEmail && (profile.settings.gmail?.email || profile.settings.smtp?.user)) {
         setFromEmail(profile.settings.gmail?.email || profile.settings.smtp?.user || "");
@@ -247,65 +261,47 @@ export default function ComposeEmailPage() {
     setRawPasteEmails("");
   };
 
-  // Handle CSV file upload
-  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Excel (.xlsx, .xls) and CSV (.csv, .tsv) file upload
+  const handleSpreadsheetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    Papa.parse<any>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const rows = results.data;
-        const validList: RecipientItem[] = [];
-        const invalidList: string[] = [];
-        let dupes = 0;
-        const existingEmails = new Set(recipients.map((r) => r.email));
+    setIsParsingSpreadsheet(true);
+    setSpreadsheetError(null);
 
-        for (const row of rows) {
-          // Identify email column flexibly
-          const emailKey = Object.keys(row).find((k) =>
-            k.toLowerCase().includes("email") || k.toLowerCase() === "mail"
-          );
-          const rawEmail = emailKey ? String(row[emailKey] || "").trim().toLowerCase() : "";
+    try {
+      const parsed = await parseSpreadsheetFile(file);
+      setUploadedFileName(file.name);
+      setDetectedColumns(parsed.detection);
 
-          const firstNameKey = Object.keys(row).find((k) =>
-            k.toLowerCase().includes("first") || k.toLowerCase() === "name"
-          );
-          const lastNameKey = Object.keys(row).find((k) => k.toLowerCase().includes("last"));
-          const companyKey = Object.keys(row).find((k) =>
-            k.toLowerCase().includes("company") || k.toLowerCase().includes("org")
-          );
+      const existingEmails = new Set(recipients.map((r) => r.email.toLowerCase()));
+      const validList: RecipientItem[] = [];
+      let extraDupes = 0;
 
-          if (isValidEmail(rawEmail)) {
-            if (existingEmails.has(rawEmail)) {
-              dupes++;
-            } else {
-              existingEmails.add(rawEmail);
-              validList.push({
-                id: `rcp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                email: rawEmail,
-                firstName: firstNameKey ? row[firstNameKey] : "",
-                lastName: lastNameKey ? row[lastNameKey] : "",
-                company: companyKey ? row[companyKey] : "",
-                customFields: row,
-                selected: true,
-              });
-            }
-          } else if (rawEmail) {
-            invalidList.push(rawEmail);
-          }
+      for (const item of parsed.recipients) {
+        if (!existingEmails.has(item.email.toLowerCase())) {
+          existingEmails.add(item.email.toLowerCase());
+          validList.push(item);
+        } else {
+          extraDupes++;
         }
+      }
 
-        setRecipients([...recipients, ...validList]);
-        setInvalidAddresses(invalidList);
-        setDuplicateCount(dupes);
-        e.target.value = "";
-      },
-      error: (err) => {
-        console.error("CSV Parse error:", err);
-      },
-    });
+      setRecipients([...recipients, ...validList]);
+      setInvalidAddresses([...invalidAddresses, ...parsed.invalidEmails]);
+      setDuplicateCount(duplicateCount + parsed.duplicateCount + extraDupes);
+
+      if (parsed.detection.customColumns.length > 0) {
+        const uniqueCols = Array.from(new Set([...discoveredCustomFields, ...parsed.detection.customColumns]));
+        setDiscoveredCustomFields(uniqueCols);
+      }
+    } catch (err: any) {
+      console.error("Spreadsheet Parse error:", err);
+      setSpreadsheetError(err.message || "Failed to parse spreadsheet file");
+    } finally {
+      setIsParsingSpreadsheet(false);
+      e.target.value = "";
+    }
   };
 
   // Add selected saved contacts
@@ -484,7 +480,15 @@ export default function ComposeEmailPage() {
           fromName,
           fromEmail,
           replyTo,
-          recipients: activeSelectedRecipients,
+          recipients: activeSelectedRecipients.map((r, idx) => ({
+            id: (r.id || `rcp_${idx}`).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 120),
+            email: r.email.trim().toLowerCase(),
+            name: r.name || [r.firstName, r.lastName].filter(Boolean).join(" ") || undefined,
+            firstName: r.firstName?.trim() || undefined,
+            lastName: r.lastName?.trim() || undefined,
+            company: r.company?.trim() || undefined,
+            customFields: r.customFields && typeof r.customFields === "object" ? r.customFields : undefined,
+          })),
           idempotencyKey: `idemp_${campaignId}`,
           trackOpens,
           trackClicks,
@@ -508,53 +512,11 @@ export default function ComposeEmailPage() {
       }
 
       setSendProgress({
-        sent: data.stats?.sent || activeSelectedRecipients.length,
+        sent: data.stats?.sent || 0,
         failed: data.stats?.failed || 0,
         total: activeSelectedRecipients.length,
-        statusText: "Batch delivery complete!",
+        statusText: "Campaign queued. Delivery continues in the background with a 2 second gap between emails.",
       });
-
-      // Update local storage representation
-      const campaignRecord: Campaign = {
-        id: campaignId,
-        userId,
-        name: campaignName,
-        subject,
-        fromName,
-        fromEmail,
-        replyTo,
-        htmlContent,
-        textContent: textContent || htmlToPlainText(htmlContent),
-        recipientCount: activeSelectedRecipients.length,
-        status: data.status || "completed",
-        stats: {
-          total: activeSelectedRecipients.length,
-          sent: data.stats?.sent || activeSelectedRecipients.length,
-          delivered: 0,
-          bounced: 0,
-          failed: data.stats?.failed || 0,
-          unsubscribed: data.stats?.suppressed || 0,
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-      };
-      await saveCampaign(campaignRecord);
-
-      // Persist individual recipient dispatch records for campaign report
-      const campaignRecipientRecords: CampaignRecipient[] = activeSelectedRecipients.map((rcp, idx) => ({
-        id: `rcp_${campaignId}_${idx}`,
-        campaignId,
-        userId,
-        email: rcp.email,
-        firstName: rcp.firstName,
-        lastName: rcp.lastName,
-        company: rcp.company,
-        status: "sent",
-        attempts: 1,
-        sentAt: new Date().toISOString(),
-      }));
-      await saveCampaignRecipients(campaignId, campaignRecipientRecords);
 
       setTimeout(() => {
         setIsProcessing(false);
@@ -569,19 +531,32 @@ export default function ComposeEmailPage() {
 
   // Preview interpolation recipient
   const previewTarget = activeSelectedRecipients[previewRecipientIndex] || {
+    id: "sample_target",
     email: user?.email || profile?.email || "recipient@example.com",
-    firstName: user?.displayName?.split(" ")[0] || "Recipient",
-    lastName: user?.displayName?.split(" ")[1] || "",
-    company: "",
+    name: user?.displayName || "John Doe",
+    firstName: user?.displayName?.split(" ")[0] || "John",
+    lastName: user?.displayName?.split(" ")[1] || "Doe",
+    company: "Acme Corp",
+    customFields: {},
   };
 
   const previewSubject = interpolateVariables(subject, {
-    ...previewTarget,
+    ...previewTarget.customFields,
+    name: previewTarget.name || [previewTarget.firstName, previewTarget.lastName].filter(Boolean).join(" "),
+    firstName: previewTarget.firstName,
+    lastName: previewTarget.lastName,
+    company: previewTarget.company,
+    email: previewTarget.email,
     fromName,
   });
 
   const previewHtml = interpolateVariables(htmlContent, {
-    ...previewTarget,
+    ...previewTarget.customFields,
+    name: previewTarget.name || [previewTarget.firstName, previewTarget.lastName].filter(Boolean).join(" "),
+    firstName: previewTarget.firstName,
+    lastName: previewTarget.lastName,
+    company: previewTarget.company,
+    email: previewTarget.email,
     fromName,
     unsubscribeUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/unsubscribe`,
   });
@@ -688,7 +663,7 @@ export default function ComposeEmailPage() {
                   value={fromName}
                   onChange={(e) => setFromName(e.target.value)}
                   className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  placeholder="e.g. MailForge Team"
+                  placeholder="e.g. Postvane Team"
                 />
               </div>
 
@@ -796,13 +771,14 @@ export default function ComposeEmailPage() {
               </button>
               <button
                 onClick={() => setRecipientTab("csv")}
-                className={`pb-2.5 px-3 border-b-2 transition-colors ${
+                className={`pb-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
                   recipientTab === "csv"
                     ? "border-blue-600 text-blue-600 font-semibold"
                     : "border-transparent text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Upload CSV
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Upload Excel / CSV</span>
               </button>
               <button
                 onClick={() => setRecipientTab("contacts")}
@@ -838,24 +814,85 @@ david@cloudscale.net"
               </div>
             )}
 
-            {/* Tab 2: Upload CSV */}
+            {/* Tab 2: Upload Excel / CSV */}
             {recipientTab === "csv" && (
-              <div className="space-y-3">
-                <label className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-slate-50/50">
-                  <Upload className="w-8 h-8 text-blue-600 mb-2" />
-                  <span className="text-xs font-semibold text-slate-800">
-                    Click or drag CSV file here
+              <div className="space-y-4">
+                <label className="border-2 border-dashed border-blue-200 hover:border-blue-500 bg-blue-50/20 hover:bg-blue-50/50 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all text-center group">
+                  <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                    {isParsingSpreadsheet ? (
+                      <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                    ) : (
+                      <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-900">
+                    {isParsingSpreadsheet ? "Analyzing spreadsheet & columns..." : "Click or drag Excel or CSV file here"}
                   </span>
-                  <span className="text-[11px] text-slate-500 mt-1">
-                    Auto-detects email, firstName, lastName, company
+                  <span className="text-[11px] text-slate-500 mt-1 max-w-xs">
+                    Supports <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong>. Automatically maps email, name, company, and all custom fields.
                   </span>
                   <input
                     type="file"
-                    accept=".csv"
-                    onChange={handleCsvUpload}
+                    accept=".xlsx,.xls,.csv,.tsv"
+                    disabled={isParsingSpreadsheet}
+                    onChange={handleSpreadsheetUpload}
                     className="hidden"
                   />
                 </label>
+
+                {spreadsheetError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{spreadsheetError}</span>
+                  </div>
+                )}
+
+                {uploadedFileName && detectedColumns && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-semibold text-slate-900">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span className="truncate max-w-[200px]">{uploadedFileName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                        <CheckCheck className="w-3 h-3" /> Auto-Mapped
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-500">Email Field: </span>
+                        <span className="font-mono font-medium text-blue-700">
+                          {detectedColumns.emailColumn || "Auto-detected"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Name Field: </span>
+                        <span className="font-mono font-medium text-slate-800">
+                          {detectedColumns.nameColumn || detectedColumns.firstNameColumn || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {detectedColumns.customColumns.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200">
+                        <span className="text-slate-500 block text-[11px] mb-1">
+                          Available variables from your file:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {detectedColumns.customColumns.map((col) => (
+                            <span
+                              key={col}
+                              className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-mono text-[10px]"
+                            >
+                              {col}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -970,9 +1007,9 @@ david@cloudscale.net"
                         />
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-800 truncate">{r.email}</p>
-                          {(r.firstName || r.company) && (
+                          {(r.name || r.firstName || r.company) && (
                             <p className="text-[11px] text-slate-500 truncate">
-                              {[r.firstName, r.lastName].filter(Boolean).join(" ")}{" "}
+                              {r.name || [r.firstName, r.lastName].filter(Boolean).join(" ")}{" "}
                               {r.company && `· ${r.company}`}
                             </p>
                           )}
@@ -1028,16 +1065,23 @@ david@cloudscale.net"
             {/* Personalization Variables Quick Insertion */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
               <span className="text-slate-500 font-medium mr-1">Insert Variable:</span>
-              {["firstName", "lastName", "company", "email"].map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => insertVariable(tag)}
-                  className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] border border-slate-200 transition-colors"
-                >
-                  {`{{${tag}}}`}
-                </button>
-              ))}
+              {Array.from(new Set(["name", "firstName", "lastName", "company", "email", ...discoveredCustomFields])).map((tag) => {
+                const isCustom = !["name", "firstName", "lastName", "company", "email"].includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => insertVariable(tag)}
+                    className={`px-2 py-0.5 rounded font-mono text-[11px] border transition-colors ${
+                      isCustom
+                        ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {`{{${tag}}}`}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Editor Mode Tabs & Visual Toolbar */}

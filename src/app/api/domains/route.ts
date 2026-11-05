@@ -7,6 +7,7 @@ import {
   listNativeDomains,
   deleteNativeDomain,
   verifyNativeDomainDns,
+  normalizeDomain,
 } from "@/lib/server/domains";
 import { rateLimit } from "@/lib/server/rate-limit";
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     const domains = await listNativeDomains(user);
 
     return json({
-      provider: "MailForge Native (DKIM + Self-Hosted)",
+      provider: "Postvane Native (DKIM + Self-Hosted)",
       domains,
     });
   } catch (error) {
@@ -36,13 +37,16 @@ export async function POST(req: NextRequest) {
       z.object({
         domain: z
           .string()
-          .trim()
-          .toLowerCase()
-          .min(3)
-          .max(253)
-          .regex(
-            /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-            "Enter a valid domain name (e.g. acme.com or mail.acme.com)."
+          .transform(normalizeDomain)
+          .refine(
+            (val) =>
+              /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
+                val
+              ),
+            {
+              message:
+                "Enter a valid domain name (e.g. acme.com or mail.acme.com).",
+            }
           ),
       })
     );

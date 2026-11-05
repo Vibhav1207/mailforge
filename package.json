@@ -1,8 +1,8 @@
 {
-  "name": "mailforge",
+  "name": "postvane",
   "version": "3.0.0",
   "private": true,
-  "description": "Production-grade Bulk Email Sending Web Application with Firebase Google Auth & Resend",
+  "description": "Postvane — Production-grade Bulk Email Sending Web Application",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -25,6 +25,7 @@
     "react-hook-form": "^7.54.2",
     "svix": "^1.61.0",
     "tailwind-merge": "^3.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

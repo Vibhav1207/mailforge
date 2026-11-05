@@ -13,12 +13,12 @@ export interface SystemEmailOptions {
  * using the server's configured environment SMTP / Gmail App Password, or logs securely in dev.
  */
 export async function dispatchSystemEmail(options: SystemEmailOptions): Promise<{ success: boolean; error?: string }> {
-  const fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || "noreply@mailforge.app";
+  const fromEmail = process.env.EMAIL_FROM || process.env.FROM_EMAIL || "noreply@postvane.app";
   const smtp = environmentSmtp();
 
   if (!smtp || !smtp.pass) {
     // In local development without configured SMTP, log message preview
-    console.info(`[MailForge System Email Dev Preview] To: ${options.to} | Subject: ${options.subject}`);
+    console.info(`[Postvane System Email Dev Preview] To: ${options.to} | Subject: ${options.subject}`);
     return { success: true };
   }
 
@@ -26,7 +26,7 @@ export async function dispatchSystemEmail(options: SystemEmailOptions): Promise<
     const result = await sendSingleEmail({
       to: options.to,
       fromEmail,
-      fromName: "MailForge Security",
+      fromName: "Postvane Security",
       subject: options.subject,
       html: options.html,
       text: options.text,

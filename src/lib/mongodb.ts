@@ -11,7 +11,7 @@ try {
 }
 
 interface MongoCache { uri: string; promise: Promise<MongoClient> }
-declare global { var mailforgeMongo: MongoCache | undefined; }
+declare global { var postvaneMongo: MongoCache | undefined; var mailforgeMongo: MongoCache | undefined; }
 
 export function isMongoConfigured(): boolean {
   return configured(process.env.MONGODB_URI || process.env.MONGO_URL);
@@ -55,7 +55,7 @@ async function resolveMongoUri(uri: string): Promise<string> {
 export async function getMongoClient(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URL;
   if (!uri || !isMongoConfigured()) throw new ApiError(503, "Configure MONGODB_URI to store templates and images.", "CONFIGURATION_REQUIRED");
-  if (!globalThis.mailforgeMongo || globalThis.mailforgeMongo.uri !== uri) {
+  if (!globalThis.postvaneMongo || globalThis.postvaneMongo.uri !== uri) {
     const connectPromise = (async () => {
       let targetUri = uri;
       try {
@@ -76,15 +76,15 @@ export async function getMongoClient(): Promise<MongoClient> {
         return client;
       } catch (err: unknown) {
         console.error(`\x1b[31m✖ [MongoDB] Connection failed:\x1b[0m`, (err as Error)?.message || err);
-        globalThis.mailforgeMongo = undefined;
+        globalThis.postvaneMongo = undefined;
         await client.close().catch(() => {});
         throw new ApiError(503, `MongoDB is unavailable: ${(err as Error)?.message || "Check connection and access settings"}`, "DATABASE_UNAVAILABLE");
       }
     })();
 
-    globalThis.mailforgeMongo = { uri, promise: connectPromise };
+    globalThis.postvaneMongo = { uri, promise: connectPromise };
   }
-  return globalThis.mailforgeMongo.promise;
+  return globalThis.postvaneMongo.promise;
 }
 
 export async function getMongoDb(): Promise<Db> {

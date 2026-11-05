@@ -60,7 +60,7 @@ export default function HomePage() {
               <Mail className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-lg text-slate-900 tracking-tight">MailForge</span>
+              <span className="font-bold text-lg text-slate-900 tracking-tight">Postvane</span>
               <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 v3.0 Production
               </span>
@@ -203,7 +203,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© 2026 MailForge. Production bulk email dispatch system.</p>
+          <p>© 2026 Postvane. Production bulk email dispatch system.</p>
           <div className="flex items-center gap-6">
             <span>Powered by Gmail Google App Password & SMTP</span>
             <span>MongoDB Template Assets</span>

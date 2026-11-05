@@ -16,7 +16,8 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
   firebaseConfig.apiKey !== "AIzaSyExampleKey1234567890abcdef" &&
   firebaseConfig.projectId &&
-  firebaseConfig.projectId !== "mailforge-prod"
+  firebaseConfig.projectId !== "mailforge-prod" &&
+  firebaseConfig.projectId !== "postvane-prod"
 );
 
 let app: FirebaseApp | undefined;

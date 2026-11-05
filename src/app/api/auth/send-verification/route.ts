@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     await dispatchSystemEmail({
       to: user.email,
-      subject: "Verify your email address for MailForge",
+      subject: "Verify your email address for Postvane",
       html: `
         <div style="font-family:sans-serif;max-width:540px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
           <h2 style="color:#0f172a;">Verify your email address</h2>

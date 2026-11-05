@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import crypto from "node:crypto";
 import { normalizeDomain } from "../src/lib/server/domains";
 
-describe("Native MailForge Domains & DKIM Engine", () => {
+describe("Native Postvane Domains & DKIM Engine", () => {
   it("normalizes and sanitizes domain names correctly", () => {
     expect(normalizeDomain("https://example.com/")).toBe("example.com");
     expect(normalizeDomain("http://SUB.DOMAIN.ORG:8080/path")).toBe("sub.domain.org");
@@ -25,27 +25,27 @@ describe("Native MailForge Domains & DKIM Engine", () => {
     expect(cleanPublicKey.length).toBeGreaterThan(200);
     expect(privateKey).toContain("BEGIN PRIVATE KEY");
 
-    const selector = "mf1";
+    const selector = "pv1";
     const domain = "testbrand.com";
     const dkimHost = `${selector}._domainkey.${domain}`;
     const dkimValue = `v=DKIM1; k=rsa; p=${cleanPublicKey}`;
 
-    expect(dkimHost).toBe("mf1._domainkey.testbrand.com");
+    expect(dkimHost).toBe("pv1._domainkey.testbrand.com");
     expect(dkimValue).toMatch(/^v=DKIM1; k=rsa; p=[A-Za-z0-9+/=]+$/);
   });
 });
 
 describe("Developer API Keys Engine", () => {
-  it("generates API keys with the secure mf_live_ prefix", () => {
+  it("generates API keys with the secure pv_live_ prefix", () => {
     const rawSecret = crypto.randomBytes(24).toString("hex");
-    const apiKey = `mf_live_${rawSecret}`;
+    const apiKey = `pv_live_${rawSecret}`;
 
-    expect(apiKey.startsWith("mf_live_")).toBe(true);
-    expect(apiKey.length).toBe(8 + 48); // "mf_live_" + 48 hex chars
+    expect(apiKey.startsWith("pv_live_")).toBe(true);
+    expect(apiKey.length).toBe(8 + 48); // "pv_live_" + 48 hex chars
   });
 
   it("creates consistent SHA-256 hashes for API key lookup", () => {
-    const testKey = "mf_live_0123456789abcdef0123456789abcdef0123456789abcdef";
+    const testKey = "pv_live_0123456789abcdef0123456789abcdef0123456789abcdef";
     const hash1 = crypto.createHash("sha256").update(testKey).digest("hex");
     const hash2 = crypto.createHash("sha256").update(testKey).digest("hex");
 
@@ -54,9 +54,9 @@ describe("Developer API Keys Engine", () => {
   });
 
   it("correctly masks key prefix for secure dashboard display", () => {
-    const testKey = "mf_live_abcdef1234567890abcdef1234567890abcdef12";
+    const testKey = "pv_live_abcdef1234567890abcdef1234567890abcdef12";
     const keyPrefix = `${testKey.slice(0, 11)}...${testKey.slice(-4)}`;
 
-    expect(keyPrefix).toBe("mf_live_abc...ef12");
+    expect(keyPrefix).toBe("pv_live_abc...ef12");
   });
 });

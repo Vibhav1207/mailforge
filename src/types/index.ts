@@ -69,7 +69,7 @@ export interface Campaign {
   completedAt?: string | null;
   trackOpens?: boolean;
   trackClicks?: boolean;
-  draftRecipients?: Array<{ id?: string; email: string; firstName?: string; lastName?: string; company?: string; customFields?: Record<string, string> }>;
+  draftRecipients?: Array<{ id?: string; email: string; name?: string; firstName?: string; lastName?: string; company?: string; customFields?: Record<string, string> }>;
 }
 
 export type RecipientStatus =
@@ -88,6 +88,7 @@ export interface CampaignRecipient {
   campaignId: string;
   userId: string;
   email: string;
+  name?: string;
   firstName?: string;
   lastName?: string;
   company?: string;

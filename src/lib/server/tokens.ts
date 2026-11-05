@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, createHash, scryptSync } from "node:crypto";
 import { getMongoDb } from "@/lib/mongodb";
 import { ApiError } from "./errors";
 
@@ -30,6 +30,15 @@ export function hashToken(token: string): string {
     throw new ApiError(400, "Invalid token provided.", "INVALID_TOKEN");
   }
   return createHash("sha256").update(token.trim()).digest("hex");
+}
+
+/**
+ * Secure password hashing using Node.js scrypt with a random 16-byte salt.
+ */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${derivedKey}`;
 }
 
 /**

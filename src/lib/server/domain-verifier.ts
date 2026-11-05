@@ -109,7 +109,7 @@ export async function assertVerifiedSenderDomain(fromEmail: string): Promise<boo
     return true;
   }
 
-  // Check MailForge native registered and verified domains
+  // Check Postvane native registered and verified domains
   try {
     const db = await getMongoDb();
     const verifiedDoc = await db.collection("domains").findOne({ domain, status: "verified" });

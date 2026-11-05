@@ -85,7 +85,7 @@ function buildDnsRecords(domain: string, selector: string, publicKey: string): N
       purpose: "SPF",
       type: "TXT",
       name: domain,
-      value: "v=spf1 include:_spf.mailforge.app ~all",
+      value: "v=spf1 include:_spf.postvane.app ~all",
       ttl: "Auto",
       status: "pending",
     },
@@ -101,7 +101,7 @@ function buildDnsRecords(domain: string, selector: string, publicKey: string): N
       purpose: "MX",
       type: "MX",
       name: domain,
-      value: "smtp.mailforge.app",
+      value: "smtp.postvane.app",
       ttl: "Auto",
       status: "pending",
       priority: 10,
@@ -110,7 +110,7 @@ function buildDnsRecords(domain: string, selector: string, publicKey: string): N
 }
 
 /**
- * Registers a new sending domain in MailForge with native DKIM generation.
+ * Registers a new sending domain in Postvane with native DKIM generation.
  */
 export async function createNativeDomain(
   user: AuthenticatedUser,
@@ -128,7 +128,7 @@ export async function createNativeDomain(
     throw new ApiError(409, `Domain "${domain}" is already registered in your account.`, "DOMAIN_EXISTS");
   }
 
-  const selector = "mf1";
+  const selector = "pv1";
   const { privateKey, publicKey } = generateDkimKeyPair();
   const encryptedPrivateKey = encryptSecret(privateKey, user.uid);
   const records = buildDnsRecords(domain, selector, publicKey);
@@ -173,9 +173,9 @@ export async function listNativeDomains(user: AuthenticatedUser): Promise<Native
     domain: d.domain,
     userId: d.userId,
     status: d.status || "pending",
-    selector: d.selector || "mf1",
+    selector: d.selector || "pv1",
     publicKey: d.publicKey,
-    records: d.records || buildDnsRecords(d.domain, d.selector || "mf1", d.publicKey),
+    records: d.records || buildDnsRecords(d.domain, d.selector || "pv1", d.publicKey),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   }));
@@ -218,7 +218,7 @@ export async function verifyNativeDomainDns(
   }
 
   const domain = doc.domain;
-  const selector = doc.selector || "mf1";
+  const selector = doc.selector || "pv1";
   const expectedKey = doc.publicKey;
 
   const resolver = new dns.Resolver();
@@ -337,7 +337,7 @@ export async function getDomainDkim(domainName: string): Promise<{
     const privateKey = decryptSecret(doc.encryptedPrivateKey, doc.userId);
     return {
       domain: doc.domain,
-      selector: doc.selector || "mf1",
+      selector: doc.selector || "pv1",
       privateKey,
     };
   } catch (err) {

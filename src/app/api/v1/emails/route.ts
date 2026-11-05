@@ -26,16 +26,22 @@ const emailDispatchSchema = z.object({
 function parseFromAddress(raw: string): { name: string; address: string } {
   const match = raw.match(/^(?:["']?([^"']*)["']?\s+<)?([^<>@\s]+@[^<>@\s]+)>?$/);
   if (!match) {
-    return { name: "MailForge Sender", address: raw.trim().toLowerCase() };
+    return { name: "Postvane Sender", address: raw.trim().toLowerCase() };
   }
-  const name = match[1]?.trim() || "MailForge Sender";
+  const name = match[1]?.trim() || "Postvane Sender";
   const address = match[2]?.trim().toLowerCase();
   return { name, address };
 }
 
 async function resolveCaller(req: NextRequest): Promise<{ uid: string; email: string }> {
   const authHeader = req.headers.get("authorization") || req.headers.get("x-api-key");
-  if (authHeader && (authHeader.startsWith("Bearer mf_live_") || authHeader.startsWith("mf_live_"))) {
+  if (
+    authHeader &&
+    (authHeader.startsWith("Bearer pv_live_") ||
+      authHeader.startsWith("pv_live_") ||
+      authHeader.startsWith("Bearer mf_live_") ||
+      authHeader.startsWith("mf_live_"))
+  ) {
     return authenticateApiKey(authHeader);
   }
 
@@ -44,7 +50,7 @@ async function resolveCaller(req: NextRequest): Promise<{ uid: string; email: st
     const user = await requireUser(req);
     return { uid: user.uid, email: user.email };
   } catch {
-    throw new ApiError(401, "Missing or invalid API key. Provide Authorization: Bearer mf_live_...", "UNAUTHORIZED");
+    throw new ApiError(401, "Missing or invalid API key. Provide Authorization: Bearer pv_live_...", "UNAUTHORIZED");
   }
 }
 

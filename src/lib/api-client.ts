@@ -5,22 +5,45 @@ import { auth } from "@/lib/firebase/client";
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   if (!path.startsWith("/api/")) throw new Error("API requests must use an application API path.");
   let token: string | null = null;
-  if (auth) {
-    await auth.authStateReady();
-    if (auth.currentUser) {
+  if (auth?.currentUser) {
+    try {
       token = await auth.currentUser.getIdToken();
-    }
+    } catch {}
   }
   if (!token && typeof document !== "undefined") {
     const match = document.cookie.match(/(?:^|;\s*)mf_auth_token=([^;]+)/);
     if (match) token = match[1];
   }
-  if (!token) {
-    throw new Error("Please sign in with your Google account to perform this operation.");
+  if (!token && auth) {
+    try {
+      await Promise.race([
+        auth.authStateReady(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Auth timeout")), 2000)),
+      ]);
+      if (auth.currentUser) token = await auth.currentUser.getIdToken();
+    } catch {}
   }
+  if (!token && typeof document !== "undefined") {
+    const match = document.cookie.match(/(?:^|;\s*)mf_auth_token=([^;]+)/);
+    if (match) token = match[1];
+  }
+  if (!token) throw new Error("Please sign in with your Google account to perform this operation.");
+
   const headers = new Headers(init.headers);
+  if (init.body && typeof init.body === "string" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   headers.set("Authorization", `Bearer ${token}`);
-  return fetch(path, { ...init, headers, cache: "no-store" });
+
+  const request = { ...init, headers, cache: "no-store" as RequestCache };
+  const canRetry = (request.method || "GET").toUpperCase() === "GET";
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(path, request);
+    if (!canRetry || ![502, 503, 504].includes(response.status) || attempt >= 2) {
+      return response;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+  }
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

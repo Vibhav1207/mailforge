@@ -7,7 +7,13 @@ import { ApiError } from "@/lib/server/errors";
 
 async function resolveCaller(req: NextRequest): Promise<{ uid: string; email: string }> {
   const authHeader = req.headers.get("authorization") || req.headers.get("x-api-key");
-  if (authHeader && (authHeader.startsWith("Bearer mf_live_") || authHeader.startsWith("mf_live_"))) {
+  if (
+    authHeader &&
+    (authHeader.startsWith("Bearer pv_live_") ||
+      authHeader.startsWith("pv_live_") ||
+      authHeader.startsWith("Bearer mf_live_") ||
+      authHeader.startsWith("mf_live_"))
+  ) {
     return authenticateApiKey(authHeader);
   }
 

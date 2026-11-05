@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     await dispatchSystemEmail({
       to: cleanEmail,
-      subject: "Reset your MailForge password",
+      subject: "Reset your Postvane password",
       html: `
         <div style="font-family:sans-serif;max-width:540px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">
           <h2 style="color:#0f172a;">Password Reset Request</h2>

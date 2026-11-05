@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MailForge — Enterprise Bulk Email Platform",
+  title: "Postvane — Enterprise Bulk Email Platform",
   description:
     "Production-grade bulk email sending platform with Firebase Google Authentication, Gmail Google App Password delivery, MongoDB template assets, dynamic personalization, and real-time deliverability analytics.",
 };

@@ -1,5 +1,5 @@
 /**
- * MailForge Native Compatibility Layer (Replaced Resend dependency)
+ * Postvane Native Compatibility Layer (Replaced Resend dependency)
  * All operations run self-hosted through native DKIM, DNS, and SMTP engines.
  */
 import { ApiError } from "./errors";
@@ -24,12 +24,12 @@ export interface ResendDomain {
 }
 
 export function isResendConfigured(): boolean {
-  // Always false - we run native MailForge engine
+  // Always false - we run native Postvane engine
   return false;
 }
 
 export function getResendApiKey(): string {
-  return "mf_native_self_hosted";
+  return "pv_native_self_hosted";
 }
 
 export async function sendEmailViaResend(params: {
@@ -43,7 +43,7 @@ export async function sendEmailViaResend(params: {
 }): Promise<{ id: string }> {
   throw new ApiError(
     501,
-    "Resend has been replaced with native MailForge delivery. Use sendSingleEmail or the /api/v1/emails developer API.",
+    "Resend has been replaced with native Postvane delivery. Use sendSingleEmail or the /api/v1/emails developer API.",
     "PROVIDER_REPLACED"
   );
 }

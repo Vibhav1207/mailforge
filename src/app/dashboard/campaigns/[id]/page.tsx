@@ -35,6 +35,7 @@ export default function CampaignDetailPage() {
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [activeTab, setActiveTab] = useState<"results" | "content">("results");
 
   const loadCampaignData = async () => {
@@ -57,6 +58,26 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     loadCampaignData();
   }, [campaignId, userId]);
+
+  useEffect(() => {
+    if (!campaign || !["queued", "sending"].includes(campaign.status)) return;
+
+    const refresh = async () => {
+      try {
+        const [updatedCampaign, updatedRecipients] = await Promise.all([
+          getCampaignById(userId, campaignId),
+          getCampaignRecipients(userId, campaignId),
+        ]);
+        if (updatedCampaign) setCampaign(updatedCampaign);
+        setRecipients(updatedRecipients);
+      } catch (error) {
+        console.error("Refresh campaign progress error:", error);
+      }
+    };
+
+    const interval = window.setInterval(refresh, 5_000);
+    return () => window.clearInterval(interval);
+  }, [campaign?.status, campaignId, userId]);
 
   // Retry eligible transient failures without resending succeeded messages
   const handleRetryFailed = async () => {
@@ -98,6 +119,7 @@ export default function CampaignDetailPage() {
               error: undefined,
               sentAt: new Date().toISOString(),
             };
+
           }
           return r;
         })
@@ -121,6 +143,21 @@ export default function CampaignDetailPage() {
       alert(err.message || "Retry failed");
     } finally {
       setRetrying(false);
+    }
+  };
+
+  const handleResume = async () => {
+    if (!campaign) return;
+    setResuming(true);
+    try {
+      const res = await apiFetch(`/api/campaigns/${campaign.id}/resume`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Resume failed");
+      await loadCampaignData();
+    } catch (err: any) {
+      alert(err.message || "Resume failed");
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -172,6 +209,16 @@ export default function CampaignDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {["queued", "sending"].includes(campaign.status) && (
+            <button
+              onClick={handleResume}
+              disabled={resuming}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-sm transition-all disabled:opacity-50"
+            >
+              <Send className={`w-3.5 h-3.5 ${resuming ? "animate-pulse" : ""}`} />
+              <span>{resuming ? "Resuming..." : "Resume"}</span>
+            </button>
+          )}
           {failedRecipientsCount > 0 && (
             <button
               onClick={handleRetryFailed}

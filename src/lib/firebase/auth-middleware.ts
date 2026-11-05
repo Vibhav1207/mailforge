@@ -32,7 +32,7 @@ export async function requireUser(req: NextRequest): Promise<AuthenticatedUser> 
     throw new ApiError(403, "A verified email address is required.", "EMAIL_NOT_VERIFIED");
   }
   const email = decoded.email.toLowerCase();
-  const allowed = process.env.MAILFORGE_ALLOWED_EMAILS?.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const allowed = (process.env.POSTVANE_ALLOWED_EMAILS || process.env.MAILFORGE_ALLOWED_EMAILS)?.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   if (allowed?.length && !allowed.includes(email)) throw new ApiError(403, "This account does not have access to this workspace.", "FORBIDDEN");
   return { uid: decoded.uid, email, name: decoded.name, picture: decoded.picture };
 }

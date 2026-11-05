@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Mail className="w-4 h-4" />
               </div>
               <div>
-                <span className="font-bold text-slate-900 tracking-tight">MailForge</span>
+                <span className="font-bold text-slate-900 tracking-tight">Postvane</span>
                 <span className="block text-[10px] uppercase font-semibold text-slate-600 tracking-wider">
                   Bulk Infrastructure
                 </span>
@@ -183,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="flex items-center gap-2 font-bold text-slate-900">
             <Mail className="w-4 h-4 text-blue-600" />
-            <span>MailForge</span>
+            <span>Postvane</span>
           </div>
           <div className="w-8" />
         </header>

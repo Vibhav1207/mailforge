@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { Transporter } from "nodemailer";
 import type { SmtpConfig } from "@/types";
 import { htmlToPlainText, interpolateVariables } from "@/lib/utils";
 import { appUrl } from "@/lib/server/config";
@@ -23,6 +24,8 @@ export interface SendSingleEmailParams {
   trackOpens?: boolean;
   trackClicks?: boolean;
   smtpConfig: SmtpConfig;
+  /** Reuse the campaign's pooled SMTP connection instead of reconnecting per recipient. */
+  transport?: Transporter;
 }
 
 export interface SendEmailResult {
@@ -99,13 +102,13 @@ export async function sendSingleEmail(params: SendSingleEmailParams): Promise<Se
     if (!isDomainVerified) {
       return {
         success: false,
-        error: `Sending domain for "${params.fromEmail}" is unverified. Please add and verify it in the MailForge Domains dashboard.`,
+        error: `Sending domain for "${params.fromEmail}" is unverified. Please add and verify it in the Postvane Domains dashboard.`,
         isTransient: false,
       };
     }
   }
 
-  // Check if native MailForge DKIM signing key exists for this domain
+  // Check if native Postvane DKIM signing key exists for this domain
   const senderDomain = params.fromEmail.split("@")[1]?.toLowerCase();
   if (senderDomain) {
     const dkim = await getDomainDkim(senderDomain);
@@ -118,9 +121,13 @@ export async function sendSingleEmail(params: SendSingleEmailParams): Promise<Se
     }
   }
 
-  let transport;
+  let transport = params.transport;
+  let ownsTransport = false;
   try {
-    transport = await createSmtpTransport(params.smtpConfig);
+    if (!transport) {
+      transport = await createSmtpTransport(params.smtpConfig);
+      ownsTransport = true;
+    }
     const info = await transport.sendMail(message);
     const accepted = (info.accepted || []).some((entry: any) =>
       (typeof entry === "string" ? entry : entry?.address || "").toLowerCase() === message.to.toLowerCase()
@@ -130,7 +137,7 @@ export async function sendSingleEmail(params: SendSingleEmailParams): Promise<Se
   } catch (error) {
     return { success: false, ...smtpError(error) };
   } finally {
-    transport?.close();
+    if (ownsTransport) transport?.close();
   }
 }
 

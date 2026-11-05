@@ -13,7 +13,7 @@ export const maxDuration = 60;
 const schema = z.object({
   to: emailSchema.optional(), subject: headerSchema.default("Email Preview"),
   htmlContent: z.string().min(1).max(300_000), textContent: z.string().max(300_000).optional(),
-  fromName: headerSchema.default("MailForge Preview"), fromEmail: optionalEmailSchema,
+  fromName: headerSchema.default("Postvane Preview"), fromEmail: optionalEmailSchema,
   replyTo: optionalEmailSchema, smtpConfig: smtpSchema.optional(),
 });
 

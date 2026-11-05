@@ -1,8 +1,8 @@
-# MailForge — Enterprise Bulk Email Platform
+# Postvane — Enterprise Bulk Email Platform
 
 > Production-grade bulk email dispatch platform built with **Next.js 15+ (App Router)**, **TypeScript**, **Firebase Google Authentication**, **Gmail Google App Password SMTP Engine**, and **MongoDB**.
 
-MailForge enables organizations, developer teams, and marketing operators to compose, personalize, manage, and dispatch bulk email campaigns with verified deliverability, automated suppression lists, MongoDB template folder image storage, and real-time delivery telemetry.
+Postvane enables organizations, developer teams, and marketing operators to compose, personalize, manage, and dispatch bulk email campaigns with verified deliverability, automated suppression lists, MongoDB template folder image storage, and real-time delivery telemetry.
 
 ---
 
@@ -56,7 +56,7 @@ MailForge enables organizations, developer teams, and marketing operators to com
 | **Email Infrastructure** | Gmail SMTP (Google App Password) & Nodemailer |
 | **CSV Parsing** | PapaParse (`papaparse`) |
 | **Icons** | Lucide React |
-| **Deployment Target** | Vercel |
+| **Deployment Target** | Netlify |
 
 ---
 
@@ -160,7 +160,7 @@ Fill in your project credentials:
    ```env
    RESEND_API_KEY=re_your_api_key_here
    RESEND_FROM_EMAIL=onboarding@resend.dev
-   RESEND_FROM_NAME="MailForge Notifications"
+   RESEND_FROM_NAME="Postvane Notifications"
    ```
 3. Set up the Webhook endpoint (Optional but recommended):
    - In Resend, go to **Webhooks** > **Add Webhook**.
@@ -183,7 +183,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-> **Offline / Demo Mode:** If Firebase credentials are not yet configured in `.env.local`, MailForge will detect this and allow you to explore the application via **"Explore Demo Workspace"**. You can test audience management, campaign composition, CSV imports, variable interpolation, and previewing without crashing. As soon as Firebase and Resend keys are provided, the app automatically switches to real Google Sign-In and live provider delivery.
+> **Offline / Demo Mode:** If Firebase credentials are not yet configured in `.env.local`, Postvane will detect this and allow you to explore the application via **"Explore Demo Workspace"**. You can test audience management, campaign composition, CSV imports, variable interpolation, and previewing without crashing. As soon as Firebase and Resend keys are provided, the app automatically switches to real Google Sign-In and live provider delivery.
 
 ---
 
@@ -203,17 +203,19 @@ npm run build
 
 ---
 
-## Deployment to Vercel
+## Deployment to Netlify
 
 1. Push your repository to GitHub or GitLab.
-2. Import the repository in [Vercel](https://vercel.com/new).
-3. In **Project Settings** > **Environment Variables**, paste all the keys from your `.env.local`:
-   - `NEXT_PUBLIC_APP_URL` (set to your Vercel deployment URL, e.g. `https://mailforge.vercel.app`)
+2. Import the repository in [Netlify](https://app.netlify.com/start).
+3. Netlify will read `netlify.toml` and use `npm run build`.
+4. In **Site configuration → Environment variables**, add the production values from `.env.example`, especially:
+   - `NEXT_PUBLIC_APP_URL` (your final HTTPS Netlify URL)
+   - `MONGODB_URI`, `MONGODB_DB_NAME`, and `SETTINGS_ENCRYPTION_KEY`
    - `NEXT_PUBLIC_FIREBASE_*` variables
-   - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
-   - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`
-   - `RESEND_WEBHOOK_SECRET`
-4. Click **Deploy**. Vercel will automatically detect the Next.js App Router and deploy edge-optimized serverless routes.
+   - `CRON_SECRET` for the protected HTTP worker endpoint
+5. Deploy the site. Netlify’s Next.js adapter serves the App Router and API routes, while `netlify/functions/campaign-worker.ts` resumes queued campaigns every minute.
+
+Scheduled functions run only on published deploys. Keep MongoDB Atlas network access open for Netlify Functions, and never commit `.env.local` or production secrets.
 
 ---
 

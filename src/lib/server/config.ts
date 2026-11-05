@@ -6,14 +6,16 @@ export function configured(value?: string): boolean {
 }
 
 export function appUrl(): string {
-  const value = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : "");
+  const vercelHost = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
+  const vercelOrigin = vercelHost ? (vercelHost.startsWith("http") ? vercelHost : `https://${vercelHost}`) : "";
+  const value = process.env.NEXT_PUBLIC_APP_URL || vercelOrigin || (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : "");
   try {
     const url = new URL(value);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
-        (process.env.NODE_ENV === "production" && url.protocol !== "https:")) throw new Error();
+        (process.env.NODE_ENV === "production" && url.protocol !== "https:" && !url.hostname.includes("localhost"))) throw new Error();
     return url.origin;
   } catch {
-    throw new ApiError(503, "Configure NEXT_PUBLIC_APP_URL with this application's public URL.", "CONFIGURATION_REQUIRED");
+    throw new ApiError(503, "Configure NEXT_PUBLIC_APP_URL or VERCEL_URL with this application's public URL.", "CONFIGURATION_REQUIRED");
   }
 }
 

@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
-import { scryptSync, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { apiError, json, parseJson } from "@/lib/server/api";
-import { verifyAndConsumeToken } from "@/lib/server/tokens";
+import { verifyAndConsumeToken, hashPassword } from "@/lib/server/tokens";
 import { getMongoDb } from "@/lib/mongodb";
 import { rateLimit } from "@/lib/server/rate-limit";
 
@@ -17,15 +16,6 @@ const resetPasswordSchema = z.object({
     .regex(/[0-9]/, "Password must include at least one number.")
     .regex(/[^A-Za-z0-9]/, "Password must include at least one special character."),
 });
-
-/**
- * Secure password hashing using Node.js scrypt with a random 16-byte salt.
- */
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const derivedKey = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${derivedKey}`;
-}
 
 export async function POST(req: NextRequest) {
   try {

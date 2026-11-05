@@ -39,7 +39,8 @@ export default function ApiKeysPage() {
     try {
       setLoading(true);
       const res = await apiFetch("/api/v1/api-keys");
-      if (res.keys) setKeys(res.keys);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.keys)) setKeys(data.keys);
     } catch (err) {
       console.error("Failed to load API keys:", err);
     } finally {
@@ -59,17 +60,24 @@ export default function ApiKeysPage() {
       setSubmitting(true);
       const res = await apiFetch("/api/v1/api-keys", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: keyName.trim() }),
       });
 
-      if (res.success && res.key) {
-        setNewlyCreatedKey(res.key.key);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create API key.");
+      }
+
+      if (data.key) {
+        setNewlyCreatedKey(data.key.key);
         setKeys((prev) => [
           {
-            id: res.key.id,
-            name: res.key.name,
-            keyPrefix: res.key.keyPrefix,
-            createdAt: res.key.createdAt,
+            id: data.key.id,
+            name: data.key.name,
+            keyPrefix: data.key.keyPrefix,
+            createdAt: data.key.createdAt,
             lastUsedAt: null,
           },
           ...prev,
@@ -88,9 +96,13 @@ export default function ApiKeysPage() {
     if (!window.confirm(`Revoke API Key "${key.name}"? Applications using this key will immediately fail.`)) return;
 
     try {
-      await apiFetch(`/api/v1/api-keys/${encodeURIComponent(key.id)}`, {
+      const res = await apiFetch(`/api/v1/api-keys/${encodeURIComponent(key.id)}`, {
         method: "DELETE",
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to revoke key.");
+      }
       setKeys((prev) => prev.filter((k) => k.id !== key.id));
     } catch (err: any) {
       alert(`Failed to revoke key: ${err?.message}`);
@@ -313,7 +325,7 @@ export default function ApiKeysPage() {
               <h3 className="text-base font-bold text-slate-900">Developer Integration Quickstart</h3>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Send your first email with MailForge using your preferred language or HTTP tool.
+              Send your first email with Postvane using your preferred language or HTTP tool.
             </p>
           </div>
 
@@ -356,10 +368,10 @@ export default function ApiKeysPage() {
             onClick={() => {
               const snippet =
                 activeTab === "curl"
-                  ? `curl -X POST https://your-mailforge-app.com/api/v1/emails \\\n  -H "Authorization: Bearer mf_live_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "from": "Acme <hello@yourdomain.com>",\n    "to": "customer@example.com",\n    "subject": "Order Confirmation",\n    "html": "<strong>Thank you for your order!</strong>"\n  }'`
+                  ? `curl -X POST https://your-postvane-app.com/api/v1/emails \\\n  -H "Authorization: Bearer pv_live_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "from": "Acme <hello@yourdomain.com>",\n    "to": "customer@example.com",\n    "subject": "Order Confirmation",\n    "html": "<strong>Thank you for your order!</strong>"\n  }'`
                   : activeTab === "ts"
-                  ? `const response = await fetch("https://your-mailforge-app.com/api/v1/emails", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer mf_live_YOUR_API_KEY",\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    from: "Acme <hello@yourdomain.com>",\n    to: "customer@example.com",\n    subject: "Order Confirmation",\n    html: "<strong>Thank you for your order!</strong>",\n  }),\n});\n\nconst data = await response.json();\nconsole.log("Email dispatched:", data.id);`
-                  : `import requests\n\nresponse = requests.post(\n    "https://your-mailforge-app.com/api/v1/emails",\n    headers={\n        "Authorization": "Bearer mf_live_YOUR_API_KEY",\n        "Content-Type": "application/json",\n    },\n    json={\n        "from": "Acme <hello@yourdomain.com>",\n        "to": "customer@example.com",\n        "subject": "Order Confirmation",\n        "html": "<strong>Thank you for your order!</strong>",\n    }\n)\n\nprint(response.json())`;
+                  ? `const response = await fetch("https://your-postvane-app.com/api/v1/emails", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer pv_live_YOUR_API_KEY",\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    from: "Acme <hello@yourdomain.com>",\n    to: "customer@example.com",\n    subject: "Order Confirmation",\n    html: "<strong>Thank you for your order!</strong>",\n  }),\n});\n\nconst data = await response.json();\nconsole.log("Email dispatched:", data.id);`
+                  : `import requests\n\nresponse = requests.post(\n    "https://your-postvane-app.com/api/v1/emails",\n    headers={\n        "Authorization": "Bearer pv_live_YOUR_API_KEY",\n        "Content-Type": "application/json",\n    },\n    json={\n        "from": "Acme <hello@yourdomain.com>",\n        "to": "customer@example.com",\n        "subject": "Order Confirmation",\n        "html": "<strong>Thank you for your order!</strong>",\n    }\n)\n\nprint(response.json())`;
               copyToClipboard(snippet, "snippet");
             }}
             className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-sans font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded transition-colors"
@@ -379,8 +391,8 @@ export default function ApiKeysPage() {
 
           {activeTab === "curl" && (
             <pre className="text-slate-300 leading-relaxed">
-              {`curl -X POST https://your-mailforge-app.com/api/v1/emails \\
-  -H "Authorization: Bearer mf_live_YOUR_API_KEY" \\
+              {`curl -X POST https://your-postvane-app.com/api/v1/emails \\
+  -H "Authorization: Bearer pv_live_YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "from": "Acme <hello@yourdomain.com>",
@@ -393,10 +405,10 @@ export default function ApiKeysPage() {
 
           {activeTab === "ts" && (
             <pre className="text-emerald-300 leading-relaxed">
-              {`const response = await fetch("https://your-mailforge-app.com/api/v1/emails", {
+              {`const response = await fetch("https://your-postvane-app.com/api/v1/emails", {
   method: "POST",
   headers: {
-    "Authorization": "Bearer mf_live_YOUR_API_KEY",
+    "Authorization": "Bearer pv_live_YOUR_API_KEY",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -417,9 +429,9 @@ console.log("Email dispatched:", data.id);`}
               {`import requests
 
 response = requests.post(
-    "https://your-mailforge-app.com/api/v1/emails",
+    "https://your-postvane-app.com/api/v1/emails",
     headers={
-        "Authorization": "Bearer mf_live_YOUR_API_KEY",
+        "Authorization": "Bearer pv_live_YOUR_API_KEY",
         "Content-Type": "application/json",
     },
     json={

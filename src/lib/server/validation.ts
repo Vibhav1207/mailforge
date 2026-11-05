@@ -15,10 +15,14 @@ export const smtpSchema = z.object({
 export const recipientSchema = z.object({
   id: idSchema.optional(),
   email: emailSchema,
+  name: z.string().max(200).optional(),
   firstName: z.string().max(200).optional(),
   lastName: z.string().max(200).optional(),
   company: z.string().max(300).optional(),
-  customFields: z.record(z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/), z.string().max(2000)).refine((fields) => Object.keys(fields).length <= 50, "At most 50 custom fields are allowed.").optional(),
+  customFields: z.record(
+    z.string().min(1).max(120),
+    z.union([z.string(), z.number(), z.boolean()]).transform((val) => String(val).slice(0, 2000))
+  ).refine((fields) => Object.keys(fields).length <= 100, "At most 100 custom fields are allowed.").optional(),
 });
 export const campaignContentSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -38,6 +42,7 @@ export const sendCampaignSchema = campaignContentSchema.extend({
   idempotencyKey: idSchema,
   recipients: z.array(recipientSchema).min(1).max(5000),
   scheduledFor: z.string().datetime().nullable().optional(),
+  smtpConfig: smtpSchema.optional(),
 });
 export const draftSchema = campaignContentSchema.extend({
   id: idSchema,

@@ -51,21 +51,79 @@ export function parseEmailList(raw: string): { valid: string[]; invalid: string[
   };
 }
 
-// Template variable interpolation {{firstName}}, {{company}}, etc.
+// Template variable interpolation {{name}}, {{firstName}}, {{company}}, {{email}}, custom fields, etc.
 export function interpolateVariables(
   content: string,
   variables: Record<string, any>
 ): string {
-  if (!content) return "";
-  return content.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    let val = variables[key];
-    if (val === undefined && variables.customFields && typeof variables.customFields === "object") {
-      val = variables.customFields[key];
+  if (!content || !variables) return content || "";
+
+  const norm = (s: string) => String(s || "").toLowerCase().replace(/[\s_\-]+/g, "");
+
+  // Build a flat lookup map with normalized keys
+  const lookup = new Map<string, any>();
+
+  // Add custom fields first
+  if (variables.customFields && typeof variables.customFields === "object") {
+    for (const [k, v] of Object.entries(variables.customFields)) {
+      if (v !== undefined && v !== null) {
+        lookup.set(norm(k), v);
+        lookup.set(k.toLowerCase(), v);
+      }
     }
-    if (val !== undefined && val !== null && val !== "" && typeof val !== "object") {
-      return String(val);
+  }
+
+  // Add top-level variables (higher priority)
+  for (const [k, v] of Object.entries(variables)) {
+    if (k !== "customFields" && v !== undefined && v !== null && typeof v !== "object") {
+      lookup.set(norm(k), v);
+      lookup.set(k.toLowerCase(), v);
     }
-    // Return empty or fallback placeholder
+  }
+
+  // Extract name derivatives
+  const explicitName = variables.name || lookup.get("name") || lookup.get("fullname");
+  const firstName = variables.firstName || lookup.get("firstname") || (explicitName ? String(explicitName).trim().split(/\s+/)[0] : "");
+  const lastName = variables.lastName || lookup.get("lastname") || (explicitName && String(explicitName).trim().split(/\s+/).length > 1 ? String(explicitName).trim().split(/\s+/).slice(1).join(" ") : "");
+  const fullName = explicitName || [firstName, lastName].filter(Boolean).join(" ") || variables.email?.split("@")[0] || "";
+
+  return content.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, rawKey) => {
+    const key = rawKey.trim();
+    const keyNorm = norm(key);
+
+    // Check direct / normalized match in lookup
+    if (lookup.has(keyNorm)) {
+      const val = lookup.get(keyNorm);
+      if (val !== undefined && val !== null && typeof val !== "object") {
+        return String(val);
+      }
+    }
+
+    // Special derivative matching
+    if (keyNorm === "name" || keyNorm === "fullname" || keyNorm === "displayname") {
+      return fullName || "";
+    }
+    if (keyNorm === "firstname" || keyNorm === "fname") {
+      return firstName || fullName || "";
+    }
+    if (keyNorm === "lastname" || keyNorm === "lname") {
+      return lastName || "";
+    }
+    if (keyNorm === "email" || keyNorm === "emailaddress") {
+      return variables.email || lookup.get("email") || "";
+    }
+    if (keyNorm === "company" || keyNorm === "companyname" || keyNorm === "organization") {
+      return variables.company || lookup.get("company") || lookup.get("companyname") || "";
+    }
+
+    // Direct key in variables or customFields
+    if (variables[key] !== undefined && typeof variables[key] !== "object") {
+      return String(variables[key]);
+    }
+    if (variables.customFields && variables.customFields[key] !== undefined && typeof variables.customFields[key] !== "object") {
+      return String(variables.customFields[key]);
+    }
+
     return "";
   });
 }

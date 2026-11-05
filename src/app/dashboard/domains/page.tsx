@@ -57,10 +57,11 @@ export default function DomainsPage() {
     try {
       setLoading(true);
       const res = await apiFetch("/api/domains");
-      if (res.domains) {
-        setDomains(res.domains);
-        if (res.domains.length > 0 && !expandedDomain) {
-          setExpandedDomain(res.domains[0].id);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.domains)) {
+        setDomains(data.domains);
+        if (data.domains.length > 0 && !expandedDomain) {
+          setExpandedDomain(data.domains[0].id);
         }
       }
     } catch (err) {
@@ -77,18 +78,36 @@ export default function DomainsPage() {
   const handleAddDomain = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError("");
-    if (!newDomainInput.trim()) return;
+
+    const cleanDomain = newDomainInput
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "")
+      .replace(/:\d+$/, "");
+
+    if (!cleanDomain) {
+      setAddError("Please enter a domain name.");
+      return;
+    }
 
     try {
       setSubmitting(true);
       const res = await apiFetch("/api/domains", {
         method: "POST",
-        body: JSON.stringify({ domain: newDomainInput }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: cleanDomain }),
       });
 
-      if (res.success && res.domain) {
-        setDomains((prev) => [res.domain, ...prev]);
-        setExpandedDomain(res.domain.id);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to add domain. Check format and try again.");
+      }
+
+      if (data.domain) {
+        setDomains((prev) => [data.domain, ...prev]);
+        setExpandedDomain(data.domain.id);
         setNewDomainInput("");
         setAddingDomain(false);
       }
@@ -104,12 +123,19 @@ export default function DomainsPage() {
       setVerifyingId(domain.id);
       const res = await apiFetch("/api/domains/verify", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain: domain.domain, domainId: domain.id }),
       });
 
-      if (res.domain) {
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Verification request failed.");
+      }
+
+      if (data.domain) {
         setDomains((prev) =>
-          prev.map((d) => (d.id === domain.id ? res.domain : d))
+          prev.map((d) => (d.id === domain.id ? data.domain : d))
         );
       }
     } catch (err: any) {
@@ -123,9 +149,13 @@ export default function DomainsPage() {
     if (!window.confirm(`Are you sure you want to remove ${domain.domain}?`)) return;
 
     try {
-      await apiFetch(`/api/domains?id=${encodeURIComponent(domain.id)}`, {
+      const res = await apiFetch(`/api/domains?id=${encodeURIComponent(domain.id)}`, {
         method: "DELETE",
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete domain.");
+      }
       setDomains((prev) => prev.filter((d) => d.id !== domain.id));
       if (expandedDomain === domain.id) setExpandedDomain(null);
     } catch (err: any) {
@@ -202,7 +232,7 @@ export default function DomainsPage() {
                 />
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                MailForge will generate an RSA-2048 DKIM keypair and custom DNS records for this domain.
+                Postvane will generate an RSA-2048 DKIM keypair and custom DNS records for this domain.
               </p>
             </div>
 
@@ -223,16 +253,16 @@ export default function DomainsPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || !newDomainInput.trim()}
-                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50"
+                disabled={submitting}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 cursor-pointer"
               >
                 {submitting ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Generating DKIM Keys...
+                    Generating DKIM & DNS Records...
                   </>
                 ) : (
-                  "Generate DNS Records"
+                  "Get DNS Records"
                 )}
               </button>
             </div>
@@ -299,7 +329,7 @@ export default function DomainsPage() {
                         )}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Selector: <code className="font-mono text-indigo-700 font-medium">{domain.selector || "mf1"}</code> • Added on {new Date(domain.createdAt).toLocaleDateString()}
+                        Selector: <code className="font-mono text-indigo-700 font-medium">{domain.selector || "pv1"}</code> • Added on {new Date(domain.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -452,7 +482,7 @@ export default function DomainsPage() {
           </div>
           <h4 className="text-sm font-bold text-slate-900 mb-1">DKIM Cryptographic Signing</h4>
           <p className="text-xs text-slate-500 leading-relaxed">
-            MailForge generates an RSA-2048 private key kept safely in encrypted storage. Outgoing emails are signed with standard RFC 6376 headers to prevent spoofing.
+            Postvane generates an RSA-2048 private key kept safely in encrypted storage. Outgoing emails are signed with standard RFC 6376 headers to prevent spoofing.
           </p>
         </div>
 
@@ -462,7 +492,7 @@ export default function DomainsPage() {
           </div>
           <h4 className="text-sm font-bold text-slate-900 mb-1">Direct DNS Verification</h4>
           <p className="text-xs text-slate-500 leading-relaxed">
-            No middleman services needed. MailForge directly queries root resolvers (8.8.8.8 and 1.1.1.1) to audit SPF, DMARC, and DKIM public records in real-time.
+            No middleman services needed. Postvane directly queries root resolvers (8.8.8.8 and 1.1.1.1) to audit SPF, DMARC, and DKIM public records in real-time.
           </p>
         </div>
 

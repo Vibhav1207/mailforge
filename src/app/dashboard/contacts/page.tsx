@@ -10,6 +10,7 @@ import {
 } from "@/lib/store/db-service";
 import { Contact, ContactStatus } from "@/types";
 import { formatDate, isValidEmail } from "@/lib/utils";
+import { parseSpreadsheetFile } from "@/lib/spreadsheet";
 import {
   Users,
   Search,
@@ -146,24 +147,53 @@ export default function ContactsManagementPage() {
     }
   };
 
-  // CSV Import File Handler
-  const handleCsvFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Spreadsheet (.xlsx, .xls, .csv) Import File Handler
+  const handleCsvFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    Papa.parse<any>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        setCsvPreviewRows(results.data.slice(0, 5));
-        setCsvTotalCount(results.data.length);
-        (window as any).__parsedCsvRows = results.data;
-      },
-    });
+    try {
+      const parsed = await parseSpreadsheetFile(file);
+      setCsvPreviewRows(parsed.recipients.slice(0, 5));
+      setCsvTotalCount(parsed.recipients.length);
+      (window as any).__parsedSpreadsheetRecipients = parsed.recipients;
+    } catch (err: any) {
+      alert(err.message || "Failed to parse spreadsheet file");
+    }
   };
 
-  // Commit CSV Import
+  // Commit CSV / Spreadsheet Import
   const handleCommitCsvImport = async () => {
+    const parsedRecipients = (window as any).__parsedSpreadsheetRecipients || [];
+    if (parsedRecipients.length > 0) {
+      const existingEmails = new Set(contacts.map((c) => c.email.toLowerCase()));
+      let importedCount = 0;
+      for (const r of parsedRecipients) {
+        if (isValidEmail(r.email) && !existingEmails.has(r.email.toLowerCase())) {
+          await saveContact({
+            id: `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            userId,
+            email: r.email.toLowerCase(),
+            firstName: r.firstName || "",
+            lastName: r.lastName || "",
+            company: r.company || "",
+            customFields: r.customFields,
+            tags: ["Spreadsheet Import"],
+            status: "active",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          existingEmails.add(r.email.toLowerCase());
+          importedCount++;
+        }
+      }
+      setImportModalOpen(false);
+      setCsvPreviewRows([]);
+      await loadContactsData();
+      alert(`Successfully imported ${importedCount} new contacts.`);
+      return;
+    }
+
     const rows = (window as any).__parsedCsvRows || [];
     if (rows.length === 0) return;
 
@@ -226,7 +256,7 @@ export default function ContactsManagementPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `mailforge_contacts_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `postvane_contacts_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -558,7 +588,7 @@ export default function ContactsManagementPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Import Contacts from CSV</h3>
+              <h3 className="text-base font-bold text-slate-900">Import Contacts from Excel or CSV</h3>
               <button onClick={() => setImportModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -567,12 +597,12 @@ export default function ContactsManagementPage() {
             <label className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-slate-50">
               <FileSpreadsheet className="w-8 h-8 text-blue-600 mb-2" />
               <span className="text-xs font-semibold text-slate-800">
-                Select CSV file to upload
+                Select Excel (.xlsx, .xls) or CSV file to upload
               </span>
               <span className="text-[11px] text-slate-500 mt-1">
-                CSV headers should include 'email', and optionally 'firstName', 'lastName', 'company'.
+                Auto-detects email, firstName, lastName, company, and custom fields.
               </span>
-              <input type="file" accept=".csv" onChange={handleCsvFile} className="hidden" />
+              <input type="file" accept=".xlsx,.xls,.csv,.tsv" onChange={handleCsvFile} className="hidden" />
             </label>
 
             {csvPreviewRows.length > 0 && (

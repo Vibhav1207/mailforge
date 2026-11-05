@@ -12,7 +12,7 @@ export function isFirebaseAdminConfigured(): boolean {
 }
 
 function adminApp() {
-  const existing = getApps().find((app) => app.name === "mailforge");
+  const existing = getApps().find((app) => app.name === "postvane" || app.name === "mailforge");
   if (existing) return existing;
   if (!isFirebaseAdminConfigured()) {
     throw new ApiError(503, "Firebase Admin is not configured. Add the server service-account credentials.", "CONFIGURATION_REQUIRED");
@@ -27,7 +27,7 @@ function adminApp() {
     return initializeApp({
       projectId,
       ...(emulator ? {} : { credential: privateKey ? cert({ projectId, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey }) : applicationDefault() }),
-    }, "mailforge");
+    }, "postvane");
   } catch {
     throw new ApiError(503, "Firebase Admin credentials could not be initialized.", "CONFIGURATION_REQUIRED");
   }

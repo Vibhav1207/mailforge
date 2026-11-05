@@ -125,7 +125,7 @@ Sent to {{email}} for {{company}}. Unsubscribe: {{unsubscribeUrl}}`
     name: "Product Announcement & Major Release",
     description: "Modern product launch layout highlighting new capabilities with clean feature cards.",
     category: "announcement",
-    subject: "Introducing MailForge 3.0: Built for {{company}}",
+    subject: "Introducing Postvane 3.0: Built for {{company}}",
     createdAt: "2026-01-01T00:00:00.000Z",
     htmlContent: `<!DOCTYPE html>
 <html>
@@ -147,7 +147,7 @@ Sent to {{email}} for {{company}}. Unsubscribe: {{unsubscribeUrl}}`
 <body>
   <div class="container">
     <div style="font-size: 12px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Product Update</div>
-    <h1 class="title">Everything is faster. Introducing MailForge 3.0.</h1>
+    <h1 class="title">Everything is faster. Introducing Postvane 3.0.</h1>
     <p style="font-size: 15px; color: #334155;">Hello {{firstName}}, we've completely re-architected our bulk delivery engine to give {{company}} the highest deliverability rates in the industry.</p>
     
     <div class="feature-card">
@@ -173,7 +173,7 @@ Sent to {{email}} for {{company}}. Unsubscribe: {{unsubscribeUrl}}`
   </div>
 </body>
 </html>`,
-    textContent: `Product Update: Introducing MailForge 3.0
+    textContent: `Product Update: Introducing Postvane 3.0
 
 Hello {{firstName}}, we've completely re-architected our bulk delivery engine to give {{company}} the highest deliverability rates in the industry.
 

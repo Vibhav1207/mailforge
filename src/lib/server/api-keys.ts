@@ -28,7 +28,7 @@ export async function createApiKey(
 ): Promise<ApiKeyCreationResult> {
   const name = sanitizeMongoInput(rawName).trim() || "Default API Key";
   const rawSecret = crypto.randomBytes(24).toString("hex");
-  const apiKey = `mf_live_${rawSecret}`;
+  const apiKey = `pv_live_${rawSecret}`;
   const keyPrefix = `${apiKey.slice(0, 11)}...${apiKey.slice(-4)}`;
   const keyHash = crypto.createHash("sha256").update(apiKey).digest("hex");
   const now = new Date().toISOString();
@@ -90,8 +90,8 @@ export async function authenticateApiKey(rawKey: string): Promise<{
   keyName: string;
 }> {
   const cleanKey = rawKey.trim().replace(/^Bearer\s+/i, "");
-  if (!cleanKey.startsWith("mf_live_")) {
-    throw new ApiError(401, "Invalid API key format. Expected 'mf_live_...'.", "UNAUTHORIZED");
+  if (!cleanKey.startsWith("pv_live_") && !cleanKey.startsWith("mf_live_")) {
+    throw new ApiError(401, "Invalid API key format. Expected 'pv_live_...'.", "UNAUTHORIZED");
   }
 
   const keyHash = crypto.createHash("sha256").update(cleanKey).digest("hex");

@@ -79,7 +79,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (profile?.settings) {
-      setFromName(profile.settings.defaultFromName || profile.displayName || user?.displayName || "MailForge Sender");
+      setFromName(profile.settings.defaultFromName || profile.displayName || user?.displayName || "Postvane Sender");
       setReplyTo(profile.settings.defaultReplyTo || "");
       setTimezone(profile.settings.timezone || "UTC");
       setTrackOpens(profile.settings.trackOpens !== false);
@@ -110,7 +110,7 @@ export default function SettingsPage() {
       const defaultMail = user?.email || "";
       setGmailEmail(defaultMail);
       setFromEmail(defaultMail);
-      setFromName(user?.displayName || "MailForge Dispatcher");
+      setFromName(user?.displayName || "Postvane Dispatcher");
     }
   }, [profile, user]);
 
@@ -200,16 +200,16 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to: target,
-          subject: "Test Dispatch from MailForge",
+          subject: "Test Dispatch from Postvane",
           htmlContent: `
             <div style="font-family: sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <h2 style="color: #2563eb; margin-top: 0;">🎉 MailForge Delivery Verified!</h2>
+              <h2 style="color: #2563eb; margin-top: 0;">🎉 Postvane Delivery Verified!</h2>
               <p>Your <strong>${isGmailMode ? "Gmail Google App Password" : "Custom SMTP"}</strong> configuration is functioning correctly.</p>
               <p style="color: #64748b; font-size: 13px;">Sender: ${fromName} &lt;${fromEmail || userEmail}&gt;</p>
-              <p style="color: #64748b; font-size: 12px; margin-top: 24px;">Sent via MailForge Production Engine.</p>
+              <p style="color: #64748b; font-size: 12px; margin-top: 24px;">Sent via Postvane Production Engine.</p>
             </div>
           `,
-          fromName: fromName || "MailForge Dispatcher",
+          fromName: fromName || "Postvane Dispatcher",
           fromEmail: fromEmail || userEmail,
           smtpConfig: activeSmtpConfig,
         }),
@@ -268,7 +268,7 @@ export default function SettingsPage() {
       const finalFromEmail = fromEmail.trim() || (isGmail ? gmailEmail.trim() : smtpUser.trim());
 
       const updated: Partial<UserSettings> = {
-        defaultFromName: fromName.trim() || "MailForge Team",
+        defaultFromName: fromName.trim() || "Postvane Team",
         defaultFromEmail: finalFromEmail,
         defaultReplyTo: replyTo.trim(),
         timezone,
@@ -488,7 +488,7 @@ export default function SettingsPage() {
                         App Passwords page <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </li>
-                    <li>Enter <strong>MailForge</strong> in the app name box and click <strong>Create</strong>.</li>
+                    <li>Enter <strong>Postvane</strong> in the app name box and click <strong>Create</strong>.</li>
                     <li>Copy the 16-character code (e.g. <code>abcd efgh ijkl mnop</code>) and paste it below.</li>
                   </ol>
                 </div>
@@ -774,7 +774,7 @@ export default function SettingsPage() {
                 type="text"
                 value={fromName}
                 onChange={(e) => setFromName(e.target.value)}
-                placeholder="e.g. MailForge Team"
+                placeholder="e.g. Postvane Team"
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
               />
             </div>

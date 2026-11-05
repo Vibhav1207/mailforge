@@ -1,22 +1,11 @@
 {
-  "builds": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "crons": [
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/public/(.*)",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.js"
+      "path": "/api/cron/campaigns",
+      "schedule": "* * * * *"
     }
   ]
 }
