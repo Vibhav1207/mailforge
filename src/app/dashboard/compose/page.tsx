@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import Papa from "papaparse";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -577,31 +578,40 @@ export default function ComposeEmailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={() => setPreviewOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
           >
             <Eye className="w-3.5 h-3.5 text-zinc-400" />
             <span>Preview</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={handleSendTestEmail}
             disabled={sendingTest || !subject || !htmlContent}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
           >
             <Mail className="w-3.5 h-3.5 text-zinc-400" />
             <span>{sendingTest ? "Sending..." : "Send Test"}</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={() => setConfirmSendOpen(true)}
             disabled={activeSelectedRecipients.length === 0 || !subject.trim() || !htmlContent.trim()}
             className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-40 shadow-sm"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Review & Send</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -1245,66 +1255,93 @@ export default function ComposeEmailPage() {
       </div>
 
       {/* MODAL 1: Choose Template Modal */}
-      {templateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
-              <h3 className="text-sm font-medium text-white">Choose an Email Template</h3>
-              <button onClick={() => setTemplateModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <AnimatePresence>
+        {templateModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+                <h3 className="text-sm font-medium text-white">Choose an Email Template</h3>
+                <button onClick={() => setTemplateModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {availableTemplates.length === 0 ? (
-                <div className="col-span-2 py-8 text-center text-xs font-mono text-zinc-500">
-                  No saved templates found. Create custom templates in the Templates section.
-                </div>
-              ) : (
-                availableTemplates.map((tmpl) => (
-                  <div
-                    key={tmpl.id}
-                    onClick={() => {
-                      setSubject(tmpl.subject);
-                      setHtmlContent(tmpl.htmlContent);
-                      setTextContent(tmpl.textContent || htmlToPlainText(tmpl.htmlContent));
-                      if (tmpl.attachments && tmpl.attachments.length > 0) {
-                        setAttachments(tmpl.attachments);
-                      }
-                      setTemplateModalOpen(false);
-                    }}
-                    className="p-4 border border-[#262A2E] rounded-xl hover:border-zinc-500 cursor-pointer transition-all bg-[#171A1D]"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-white">{tmpl.name}</span>
-                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#111315] border border-[#262A2E] text-zinc-400">
-                        {tmpl.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-400 line-clamp-2 mt-1">{tmpl.description}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {availableTemplates.length === 0 ? (
+                  <div className="col-span-2 py-8 text-center text-xs font-mono text-zinc-500">
+                    No saved templates found. Create custom templates in the Templates section.
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                ) : (
+                  availableTemplates.map((tmpl) => (
+                    <div
+                      key={tmpl.id}
+                      onClick={() => {
+                        setSubject(tmpl.subject);
+                        setHtmlContent(tmpl.htmlContent);
+                        setTextContent(tmpl.textContent || htmlToPlainText(tmpl.htmlContent));
+                        if (tmpl.attachments && tmpl.attachments.length > 0) {
+                          setAttachments(tmpl.attachments);
+                        }
+                        setTemplateModalOpen(false);
+                      }}
+                      className="p-4 border border-[#262A2E] rounded-xl hover:border-zinc-500 cursor-pointer transition-all bg-[#171A1D] hover:-translate-y-0.5"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-white">{tmpl.name}</span>
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#111315] border border-[#262A2E] text-zinc-400">
+                          {tmpl.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 line-clamp-2 mt-1">{tmpl.description}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL 2: Interactive Live Preview Modal */}
-      {previewOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
-              <div>
-                <h3 className="text-sm font-medium text-white">Email Preview & Personalization Check</h3>
-                <p className="text-xs text-zinc-500 font-mono mt-0.5">
-                  Simulating recipient {previewRecipientIndex + 1} of {Math.max(1, activeSelectedRecipients.length)}
-                </p>
+      <AnimatePresence>
+        {previewOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-white">Email Preview & Personalization Check</h3>
+                  <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                    Simulating recipient {previewRecipientIndex + 1} of {Math.max(1, activeSelectedRecipients.length)}
+                  </p>
+                </div>
+                <button onClick={() => setPreviewOpen(false)} className="p-1 text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setPreviewOpen(false)} className="p-1 text-zinc-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
             {/* Recipient switcher */}
             {activeSelectedRecipients.length > 1 && (
@@ -1357,115 +1394,144 @@ export default function ComposeEmailPage() {
                 className="font-sans leading-relaxed text-sm"
               />
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+    </AnimatePresence>
 
       {/* MODAL 3: Confirm & Schedule Dispatch Modal */}
-      {confirmSendOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4">
-            <h3 className="text-base font-medium text-white">Confirm Campaign Dispatch</h3>
+      <AnimatePresence>
+        {confirmSendOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4"
+            >
+              <h3 className="text-base font-medium text-white">Confirm Campaign Dispatch</h3>
 
-            <div className="p-4 bg-[#171A1D] border border-[#262A2E] rounded-xl text-xs space-y-2 font-mono">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Recipients:</span>
-                <span className="text-white font-medium">{activeSelectedRecipients.length} addresses</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Sender Identity:</span>
-                <span className="text-zinc-300">{fromEmail}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Delivery Transport:</span>
-                <span className="text-emerald-400">
-                  {profile?.settings?.smtp?.host ? `SMTP (${profile.settings.smtp.host})` : "Direct SMTP"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Tracking:</span>
-                <span className="text-zinc-300">
-                  {trackOpens ? "Opens " : ""}{trackClicks ? "& Clicks" : ""}{!trackOpens && !trackClicks ? "Disabled" : ""}
-                </span>
-              </div>
-              {attachments.length > 0 && (
+              <div className="p-4 bg-[#171A1D] border border-[#262A2E] rounded-xl text-xs space-y-2 font-mono">
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Attachments:</span>
-                  <span className="text-white">{attachments.length} file(s)</span>
+                  <span className="text-zinc-400">Recipients:</span>
+                  <span className="text-white font-medium">{activeSelectedRecipients.length} addresses</span>
                 </div>
-              )}
-            </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Sender Identity:</span>
+                  <span className="text-zinc-300">{fromEmail}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Delivery Transport:</span>
+                  <span className="text-emerald-400">
+                    {profile?.settings?.smtp?.host ? `SMTP (${profile.settings.smtp.host})` : "Direct SMTP"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Tracking:</span>
+                  <span className="text-zinc-300">
+                    {trackOpens ? "Opens " : ""}{trackClicks ? "& Clicks" : ""}{!trackOpens && !trackClicks ? "Disabled" : ""}
+                  </span>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Attachments:</span>
+                    <span className="text-white">{attachments.length} file(s)</span>
+                  </div>
+                )}
+              </div>
 
-            {/* Schedule Option */}
-            <div className="pt-2 border-t border-[#262A2E]">
-              <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer mb-2">
-                <input
-                  type="checkbox"
-                  checked={scheduleMode}
-                  onChange={(e) => setScheduleMode(e.target.checked)}
-                  className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
-                />
-                <span>Schedule for future date & time</span>
-              </label>
+              {/* Schedule Option */}
+              <div className="pt-2 border-t border-[#262A2E]">
+                <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={scheduleMode}
+                    onChange={(e) => setScheduleMode(e.target.checked)}
+                    className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
+                  />
+                  <span>Schedule for future date & time</span>
+                </label>
 
-              {scheduleMode && (
-                <input
-                  type="datetime-local"
-                  value={scheduleDateTime}
-                  onChange={(e) => setScheduleDateTime(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:outline-none font-mono"
-                />
-              )}
-            </div>
+                {scheduleMode && (
+                  <input
+                    type="datetime-local"
+                    value={scheduleDateTime}
+                    onChange={(e) => setScheduleDateTime(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:outline-none font-mono"
+                  />
+                )}
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setConfirmSendOpen(false)}
-                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleExecuteSend}
-                className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
-              >
-                {scheduleMode ? "Schedule Campaign" : "Dispatch Campaign"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setConfirmSendOpen(false)}
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExecuteSend}
+                  className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
+                >
+                  {scheduleMode ? "Schedule Campaign" : "Dispatch Campaign"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL 4: Real-time Dispatch Progress Modal */}
-      {isProcessing && sendProgress && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 text-center space-y-4">
-            <RefreshCw className="w-8 h-8 text-white animate-spin mx-auto" />
-            <h3 className="text-base font-medium text-white">Dispatching Bulk Campaign</h3>
-            <p className="text-xs text-zinc-400 font-mono">{sendProgress.statusText}</p>
+      <AnimatePresence>
+        {isProcessing && sendProgress && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 text-center space-y-4"
+            >
+              <RefreshCw className="w-8 h-8 text-white animate-spin mx-auto" />
+              <h3 className="text-base font-medium text-white">Dispatching Bulk Campaign</h3>
+              <p className="text-xs text-zinc-400 font-mono">{sendProgress.statusText}</p>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-[#171A1D] border border-[#262A2E] rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-white h-full transition-all duration-300 rounded-full"
-                style={{
-                  width: `${
-                    sendProgress.total > 0
-                      ? ((sendProgress.sent + sendProgress.failed) / sendProgress.total) * 100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
+              {/* Progress Bar */}
+              <div className="w-full bg-[#171A1D] border border-[#262A2E] rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-white h-full transition-all duration-300 rounded-full"
+                  style={{
+                    width: `${
+                      sendProgress.total > 0
+                        ? ((sendProgress.sent + sendProgress.failed) / sendProgress.total) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
 
-            <div className="flex justify-between text-xs text-zinc-500 font-mono pt-1">
-              <span>{sendProgress.sent} dispatched</span>
-              <span>{sendProgress.failed} failed</span>
-              <span>{sendProgress.total} total</span>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex justify-between text-xs text-zinc-500 font-mono pt-1">
+                <span>{sendProgress.sent} dispatched</span>
+                <span>{sendProgress.failed} failed</span>
+                <span>{sendProgress.total} total</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

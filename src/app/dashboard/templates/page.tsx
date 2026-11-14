@@ -12,6 +12,7 @@ import {
 import { apiFetch } from "@/lib/api-client";
 import { EmailTemplate, TemplateImage, EmailAttachment } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 import {
   FileCode2,
   Plus,
@@ -411,7 +412,10 @@ export default function TemplatesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={() => {
               setImageLibraryOpen(true);
               loadLibraryImages("all");
@@ -420,15 +424,18 @@ export default function TemplatesPage() {
           >
             <Folder className="w-3.5 h-3.5 text-zinc-400" />
             <span>Asset Folders</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={handleOpenCreate}
             className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Custom Template</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -497,7 +504,7 @@ export default function TemplatesPage() {
           {filtered.map((t) => (
             <div
               key={t.id}
-              className="bg-[#111315] rounded-xl border border-[#262A2E] flex flex-col justify-between hover:border-zinc-500 transition-all overflow-hidden group"
+              className="bg-[#111315] rounded-xl border border-[#262A2E] flex flex-col justify-between hover:border-zinc-500 hover:-translate-y-1 transition-all duration-200 overflow-hidden group shadow-sm hover:shadow-lg hover:shadow-black/40"
             >
               {/* Optional Header Banner Image */}
               {t.imageUrl && (
@@ -600,487 +607,529 @@ export default function TemplatesPage() {
       )}
 
       {/* EDIT / CREATE TEMPLATE MODAL */}
-      {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
-              <div>
-                <h2 className="text-sm font-medium text-white">
-                  {editingTemplate ? "Edit Email Template" : "Create New Custom Template"}
-                </h2>
-                <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                  Configure HTML body, folder category, and header banner.
-                </p>
+      <AnimatePresence>
+        {editModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
+                <div>
+                  <h2 className="text-sm font-medium text-white">
+                    {editingTemplate ? "Edit Email Template" : "Create New Custom Template"}
+                  </h2>
+                  <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                    Configure HTML body, folder category, and header banner.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditModalOpen(false)}
+                  className="p-1 text-zinc-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="p-1 text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
+              <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                      Template Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={modalName}
+                      onChange={(e) => setModalName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
+                      placeholder="e.g. Q4 Customer Outreach"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={modalCategory}
+                      onChange={(e) => setModalCategory(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:outline-none"
+                    >
+                      <option value="custom">Custom</option>
+                      <option value="outreach">Cold Outreach</option>
+                      <option value="event">Event / Webinar</option>
+                      <option value="announcement">Product Announcement</option>
+                      <option value="newsletter">Newsletter</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Folder & Optional Image Section */}
+                <div className="p-4 bg-[#171A1D] rounded-xl border border-[#262A2E] space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center gap-1">
+                        <Folder className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Template Folder</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={modalFolder}
+                        onChange={(e) => setModalFolder(e.target.value)}
+                        placeholder="general, marketing, outreach"
+                        className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg font-mono focus:border-zinc-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>Header Banner (Optional)</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          JPG, PNG, WebP
+                        </span>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>{uploadingImage ? "Uploading..." : "Upload Image"}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            disabled={uploadingImage}
+                            className="hidden"
+                          />
+                        </label>
+
+                        <input
+                          type="text"
+                          value={modalImageUrl}
+                          onChange={(e) => setModalImageUrl(e.target.value)}
+                          placeholder="Image URL"
+                          className="flex-1 px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {uploadError && (
+                        <p className="text-[11px] font-mono text-red-400 mt-1">{uploadError}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Image Preview & HTML Insertion Helper */}
+                  {modalImageUrl && (
+                    <div className="flex items-center justify-between p-2.5 bg-[#111315] border border-[#262A2E] rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={modalImageUrl}
+                          alt="Preview"
+                          className="w-14 h-10 object-cover rounded border border-[#262A2E]"
+                        />
+                        <div>
+                          <span className="text-[11px] font-medium text-white block">
+                            Image active for template
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono truncate max-w-xs block">
+                            {modalImageUrl}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleInsertImageIntoHtml}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono text-zinc-300 bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] rounded transition-colors"
+                        >
+                          <Code2 className="w-3 h-3" />
+                          <span>Insert HTML Tag</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setModalImageUrl("")}
+                          className="text-zinc-500 hover:text-red-400 p-1"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Template Attachments (PDF & Documents) */}
+                  <div className="pt-2 border-t border-[#262A2E] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Default Attachments (PDF, Documents)</span>
+                        {modalAttachments.length > 0 && (
+                          <span className="text-[10px] bg-[#111315] text-zinc-300 px-1.5 py-0.5 rounded font-mono border border-[#262A2E]">
+                            {modalAttachments.length}/5
+                          </span>
+                        )}
+                      </label>
+                      <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
+                        <UploadCloud className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Attach File</span>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,application/pdf,image/*,.doc,.docx,.txt,.csv"
+                          onChange={handleModalAttachmentChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    {modalAttachmentError && (
+                      <div className="flex items-center gap-1.5 text-red-400 text-xs bg-red-950/40 p-2 rounded-lg border border-red-500/30 font-mono">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{modalAttachmentError}</span>
+                      </div>
+                    )}
+
+                    {modalAttachments.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {modalAttachments.map((file, fileIdx) => {
+                          const isPdf = file.filename.toLowerCase().endsWith(".pdf") || file.contentType.includes("pdf");
+                          const sizeFormatted = file.size < 1024 * 1024
+                            ? `${(file.size / 1024).toFixed(1)} KB`
+                            : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+                          return (
+                            <div
+                              key={file.id || fileIdx}
+                              className="flex items-center justify-between p-2 rounded-lg border border-[#262A2E] bg-[#111315]"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="p-1 rounded bg-[#171A1D] text-zinc-400">
+                                  <FileText className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="truncate">
+                                  <span className="text-xs font-medium text-white block truncate">
+                                    {file.filename}
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500 font-mono">
+                                    {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeModalAttachment(file.id || fileIdx)}
+                                className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
+                                title="Remove attachment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div>
                   <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                    Template Name
+                    Default Subject Line
                   </label>
                   <input
                     type="text"
                     required
-                    value={modalName}
-                    onChange={(e) => setModalName(e.target.value)}
+                    value={modalSubject}
+                    onChange={(e) => setModalSubject(e.target.value)}
                     className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
-                    placeholder="e.g. Q4 Customer Outreach"
+                    placeholder="Subject line with {{firstName}}"
                   />
                 </div>
+
                 <div>
                   <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                    Category
+                    Description
                   </label>
-                  <select
-                    value={modalCategory}
-                    onChange={(e) => setModalCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:outline-none"
+                  <input
+                    type="text"
+                    value={modalDescription}
+                    onChange={(e) => setModalDescription(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
+                    placeholder="Description of template purpose"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-mono text-zinc-400">
+                      HTML Template Code
+                    </label>
+                    <span className="text-[11px] text-zinc-500 font-mono">
+                      Tokens: {"{{firstName}}"}, {"{{company}}"}, {"{{fromName}}"}
+                    </span>
+                  </div>
+                  <textarea
+                    rows={9}
+                    required
+                    value={modalHtml}
+                    onChange={(e) => setModalHtml(e.target.value)}
+                    className="w-full p-2.5 font-mono text-xs bg-[#171A1D] border border-[#262A2E] text-zinc-200 rounded-lg focus:border-zinc-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(false)}
+                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
                   >
-                    <option value="custom">Custom</option>
-                    <option value="outreach">Cold Outreach</option>
-                    <option value="event">Event / Webinar</option>
-                    <option value="announcement">Product Announcement</option>
-                    <option value="newsletter">Newsletter</option>
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
+                  >
+                    Save Template
+                  </button>
                 </div>
-              </div>
-
-              {/* Folder & Optional Image Section */}
-              <div className="p-4 bg-[#171A1D] rounded-xl border border-[#262A2E] space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center gap-1">
-                      <Folder className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Template Folder</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={modalFolder}
-                      onChange={(e) => setModalFolder(e.target.value)}
-                      placeholder="general, marketing, outreach"
-                      className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg font-mono focus:border-zinc-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
-                        <span>Header Banner (Optional)</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-500">
-                        JPG, PNG, WebP
-                      </span>
-                    </label>
-
-                    <div className="flex items-center gap-2">
-                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
-                        <UploadCloud className="w-3.5 h-3.5" />
-                        <span>{uploadingImage ? "Uploading..." : "Upload Image"}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageFileChange}
-                          disabled={uploadingImage}
-                          className="hidden"
-                        />
-                      </label>
-
-                      <input
-                        type="text"
-                        value={modalImageUrl}
-                        onChange={(e) => setModalImageUrl(e.target.value)}
-                        placeholder="Image URL"
-                        className="flex-1 px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
-                      />
-                    </div>
-
-                    {uploadError && (
-                      <p className="text-[11px] font-mono text-red-400 mt-1">{uploadError}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Image Preview & HTML Insertion Helper */}
-                {modalImageUrl && (
-                  <div className="flex items-center justify-between p-2.5 bg-[#111315] border border-[#262A2E] rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={modalImageUrl}
-                        alt="Preview"
-                        className="w-14 h-10 object-cover rounded border border-[#262A2E]"
-                      />
-                      <div>
-                        <span className="text-[11px] font-medium text-white block">
-                          Image active for template
-                        </span>
-                        <span className="text-[10px] text-zinc-500 font-mono truncate max-w-xs block">
-                          {modalImageUrl}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleInsertImageIntoHtml}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono text-zinc-300 bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] rounded transition-colors"
-                      >
-                        <Code2 className="w-3 h-3" />
-                        <span>Insert HTML Tag</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setModalImageUrl("")}
-                        className="text-zinc-500 hover:text-red-400 p-1"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Template Attachments (PDF & Documents) */}
-                <div className="pt-2 border-t border-[#262A2E] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                      <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Default Attachments (PDF, Documents)</span>
-                      {modalAttachments.length > 0 && (
-                        <span className="text-[10px] bg-[#111315] text-zinc-300 px-1.5 py-0.5 rounded font-mono border border-[#262A2E]">
-                          {modalAttachments.length}/5
-                        </span>
-                      )}
-                    </label>
-                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
-                      <UploadCloud className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Attach File</span>
-                      <input
-                        type="file"
-                        multiple
-                        accept=".pdf,application/pdf,image/*,.doc,.docx,.txt,.csv"
-                        onChange={handleModalAttachmentChange}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-
-                  {modalAttachmentError && (
-                    <div className="flex items-center gap-1.5 text-red-400 text-xs bg-red-950/40 p-2 rounded-lg border border-red-500/30 font-mono">
-                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>{modalAttachmentError}</span>
-                    </div>
-                  )}
-
-                  {modalAttachments.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {modalAttachments.map((file, fileIdx) => {
-                        const isPdf = file.filename.toLowerCase().endsWith(".pdf") || file.contentType.includes("pdf");
-                        const sizeFormatted = file.size < 1024 * 1024
-                          ? `${(file.size / 1024).toFixed(1)} KB`
-                          : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-                        return (
-                          <div
-                            key={file.id || fileIdx}
-                            className="flex items-center justify-between p-2 rounded-lg border border-[#262A2E] bg-[#111315]"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="p-1 rounded bg-[#171A1D] text-zinc-400">
-                                <FileText className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="truncate">
-                                <span className="text-xs font-medium text-white block truncate">
-                                  {file.filename}
-                                </span>
-                                <span className="text-[10px] text-zinc-500 font-mono">
-                                  {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeModalAttachment(file.id || fileIdx)}
-                              className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
-                              title="Remove attachment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                  Default Subject Line
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={modalSubject}
-                  onChange={(e) => setModalSubject(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
-                  placeholder="Subject line with {{firstName}}"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  value={modalDescription}
-                  onChange={(e) => setModalDescription(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
-                  placeholder="Description of template purpose"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-mono text-zinc-400">
-                    HTML Template Code
-                  </label>
-                  <span className="text-[11px] text-zinc-500 font-mono">
-                    Tokens: {"{{firstName}}"}, {"{{company}}"}, {"{{fromName}}"}
-                  </span>
-                </div>
-                <textarea
-                  rows={9}
-                  required
-                  value={modalHtml}
-                  onChange={(e) => setModalHtml(e.target.value)}
-                  className="w-full p-2.5 font-mono text-xs bg-[#171A1D] border border-[#262A2E] text-zinc-200 rounded-lg focus:border-zinc-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
-                <button
-                  type="button"
-                  onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
-                >
-                  Save Template
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ASSET FOLDERS & MEDIA LIBRARY MODAL */}
-      {imageLibraryOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Folder className="w-4 h-4 text-zinc-300" />
-                  <h2 className="text-sm font-medium text-white">
-                    Asset Folders & Media Library
-                  </h2>
-                </div>
-                <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                  Personal media files organized into your custom folders.
-                </p>
-              </div>
-              <button
-                onClick={() => setImageLibraryOpen(false)}
-                className="p-1 text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Upload image to specific folder */}
-            <div className="p-3.5 bg-[#171A1D] border border-[#262A2E] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 font-mono">
-                <Folder className="w-4 h-4 text-zinc-400" />
-                <span className="text-zinc-400">Target Folder:</span>
-                <input
-                  type="text"
-                  value={uploadLibraryFolder}
-                  onChange={(e) => setUploadLibraryFolder(e.target.value)}
-                  placeholder="general, marketing..."
-                  className="px-2.5 py-1 text-xs bg-[#111315] border border-[#262A2E] text-white rounded w-40 font-mono focus:outline-none"
-                />
-              </div>
-
-              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors">
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>{uploadingLibraryImg ? "Uploading..." : "Upload to Folder"}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLibraryUpload}
-                  disabled={uploadingLibraryImg}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* Filter images by folder - user's own folders */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-              <span className="text-zinc-500">Folder filter:</span>
-              {["all", ...mediaFolders].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => {
-                    setLibraryFolderFilter(f);
-                    loadLibraryImages(f);
-                  }}
-                  className={`px-2.5 py-1 rounded text-xs transition-colors ${
-                    libraryFolderFilter === f
-                      ? "bg-white text-black font-medium"
-                      : "bg-[#171A1D] text-zinc-400 hover:text-zinc-200 border border-[#262A2E]"
-                  }`}
-                >
-                  {f === "all" ? "All Folders" : f}
-                </button>
-              ))}
-            </div>
-
-            {/* Images Grid */}
-            {loadingImages ? (
-              <div className="py-12 text-center text-xs font-mono text-zinc-500">
-                LOADING ASSETS...
-              </div>
-            ) : libraryImages.length === 0 ? (
-              <div className="py-12 text-center text-xs font-mono text-zinc-500 border border-dashed border-[#262A2E] rounded-xl space-y-2">
-                <ImageIcon className="w-8 h-8 text-zinc-600 mx-auto" />
-                <p>No assets found in this folder.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1">
-                {libraryImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className="border border-[#262A2E] rounded-xl overflow-hidden bg-[#171A1D] group flex flex-col justify-between"
-                  >
-                    <div className="h-28 bg-[#111315] relative overflow-hidden">
-                      <img
-                        src={img.url}
-                        alt={img.filename}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <span className="absolute bottom-1 left-1 bg-black/80 border border-[#262A2E] text-zinc-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
-                        📁 {img.folder || "general"}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 text-xs space-y-2 font-mono">
-                      <p className="text-white truncate" title={img.filename}>
-                        {img.filename}
-                      </p>
-
-                      <div className="flex items-center justify-between pt-1 border-t border-[#262A2E]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(img.url);
-                            setCopiedUrl(img.id);
-                            setTimeout(() => setCopiedUrl(null), 2000);
-                          }}
-                          className="inline-flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white"
-                        >
-                          {copiedUrl === img.id ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                          <span>{copiedUrl === img.id ? "Copied" : "Copy URL"}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteImage(img.id)}
-                          className="text-zinc-500 hover:text-red-400 p-1"
-                          title="Delete asset"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+      <AnimatePresence>
+        {imageLibraryOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-zinc-300" />
+                    <h2 className="text-sm font-medium text-white">
+                      Asset Folders & Media Library
+                    </h2>
                   </div>
+                  <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                    Personal media files organized into your custom folders.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setImageLibraryOpen(false)}
+                  className="p-1 text-zinc-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Upload image to specific folder */}
+              <div className="p-3.5 bg-[#171A1D] border border-[#262A2E] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 font-mono">
+                  <Folder className="w-4 h-4 text-zinc-400" />
+                  <span className="text-zinc-400">Target Folder:</span>
+                  <input
+                    type="text"
+                    value={uploadLibraryFolder}
+                    onChange={(e) => setUploadLibraryFolder(e.target.value)}
+                    placeholder="general, marketing..."
+                    className="px-2.5 py-1 text-xs bg-[#111315] border border-[#262A2E] text-white rounded w-40 font-mono focus:outline-none"
+                  />
+                </div>
+
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors">
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>{uploadingLibraryImg ? "Uploading..." : "Upload to Folder"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLibraryUpload}
+                    disabled={uploadingLibraryImg}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Filter images by folder - user's own folders */}
+              <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+                <span className="text-zinc-500">Folder filter:</span>
+                {["all", ...mediaFolders].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      setLibraryFolderFilter(f);
+                      loadLibraryImages(f);
+                    }}
+                    className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                      libraryFolderFilter === f
+                        ? "bg-white text-black font-medium"
+                        : "bg-[#171A1D] text-zinc-400 hover:text-zinc-200 border border-[#262A2E]"
+                    }`}
+                  >
+                    {f === "all" ? "All Folders" : f}
+                  </button>
                 ))}
               </div>
-            )}
 
-            <div className="flex justify-end pt-2 border-t border-[#262A2E]">
-              <button
-                type="button"
-                onClick={() => setImageLibraryOpen(false)}
-                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
-              >
-                Close Library
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Images Grid */}
+              {loadingImages ? (
+                <div className="py-12 text-center text-xs font-mono text-zinc-500">
+                  LOADING ASSETS...
+                </div>
+              ) : libraryImages.length === 0 ? (
+                <div className="py-12 text-center text-xs font-mono text-zinc-500 border border-dashed border-[#262A2E] rounded-xl space-y-2">
+                  <ImageIcon className="w-8 h-8 text-zinc-600 mx-auto" />
+                  <p>No assets found in this folder.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1">
+                  {libraryImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className="border border-[#262A2E] rounded-xl overflow-hidden bg-[#171A1D] group flex flex-col justify-between"
+                    >
+                      <div className="h-28 bg-[#111315] relative overflow-hidden">
+                        <img
+                          src={img.url}
+                          alt={img.filename}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <span className="absolute bottom-1 left-1 bg-black/80 border border-[#262A2E] text-zinc-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                          📁 {img.folder || "general"}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 text-xs space-y-2 font-mono">
+                        <p className="text-white truncate" title={img.filename}>
+                          {img.filename}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-[#262A2E]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(img.url);
+                              setCopiedUrl(img.id);
+                              setTimeout(() => setCopiedUrl(null), 2000);
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white"
+                          >
+                            {copiedUrl === img.id ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span>{copiedUrl === img.id ? "Copied" : "Copy URL"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteImage(img.id)}
+                            className="text-zinc-500 hover:text-red-400 p-1"
+                            title="Delete asset"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2 border-t border-[#262A2E]">
+                <button
+                  type="button"
+                  onClick={() => setImageLibraryOpen(false)}
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                >
+                  Close Library
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* PREVIEW TEMPLATE MODAL */}
-      {previewTemplate && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
-              <div>
-                <h2 className="text-sm font-medium text-white">{previewTemplate.name}</h2>
-                <p className="text-xs text-zinc-400 font-mono mt-0.5">{previewTemplate.subject}</p>
+      <AnimatePresence>
+        {previewTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
+                <div>
+                  <h2 className="text-sm font-medium text-white">{previewTemplate.name}</h2>
+                  <p className="text-xs text-zinc-400 font-mono mt-0.5">{previewTemplate.subject}</p>
+                </div>
+                <button
+                  onClick={() => setPreviewTemplate(null)}
+                  className="p-1 text-zinc-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setPreviewTemplate(null)}
-                className="p-1 text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto border border-[#262A2E] rounded-xl p-4 bg-[#08090A]">
-              <iframe
-                title="Preview"
-                srcDoc={previewTemplate.htmlContent}
-                className="w-full min-h-[380px] bg-white rounded-lg border border-zinc-700"
-              />
-            </div>
+              <div className="flex-1 overflow-y-auto border border-[#262A2E] rounded-xl p-4 bg-[#08090A]">
+                <iframe
+                  title="Preview"
+                  srcDoc={previewTemplate.htmlContent}
+                  className="w-full min-h-[380px] bg-white rounded-lg border border-zinc-700"
+                />
+              </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-zinc-500 font-mono">
-                Created: {formatDate(previewTemplate.createdAt)}
-              </span>
-              <button
-                onClick={() => {
-                  router.push(`/dashboard/compose?templateId=${previewTemplate.id}`);
-                  setPreviewTemplate(null);
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Use in Campaign</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] text-zinc-500 font-mono">
+                  Created: {formatDate(previewTemplate.createdAt)}
+                </span>
+                <button
+                  onClick={() => {
+                    router.push(`/dashboard/compose?templateId=${previewTemplate.id}`);
+                    setPreviewTemplate(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Use in Campaign</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

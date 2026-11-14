@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { apiFetch } from "@/lib/api-client";
 import {
   Globe,
@@ -185,86 +186,98 @@ export default function DomainsPage() {
           </p>
         </div>
 
-        <button
+        <motion.button
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setAddingDomain(true)}
           className="inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white rounded-lg hover:bg-zinc-200 transition-colors shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Add Domain</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* Add Domain Drawer */}
-      {addingDomain && (
-        <div className="bg-[#111315] border border-[#262A2E] rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-zinc-400" />
-              <h2 className="text-sm font-medium text-white">Connect a Sending Domain</h2>
-            </div>
-            <button
-              onClick={() => {
-                setAddingDomain(false);
-                setAddError("");
-              }}
-              className="text-zinc-500 hover:text-white text-xs font-mono"
-            >
-              Cancel
-            </button>
-          </div>
-
-          <form onSubmit={handleAddDomain} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                Domain Name
-              </label>
-              <input
-                type="text"
-                placeholder="acme.com or mail.acme.com"
-                value={newDomainInput}
-                onChange={(e) => setNewDomainInput(e.target.value)}
-                className="w-full px-3 py-2 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs text-white font-mono focus:border-zinc-500 focus:outline-none"
-                disabled={submitting}
-                autoFocus
-              />
-              <p className="text-[11px] text-zinc-500 font-mono mt-1">
-                Postvane will generate an RSA-2048 DKIM keypair and DNS records for this domain.
-              </p>
-            </div>
-
-            {addError && (
-              <div className="flex items-center gap-2 p-3 text-xs text-red-400 bg-red-950/40 border border-red-500/30 rounded-lg font-mono">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{addError}</span>
+      <AnimatePresence>
+        {addingDomain && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.99 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.99 }}
+            transition={{ duration: 0.2 }}
+            className="bg-[#111315] border border-[#262A2E] rounded-xl p-5 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-zinc-400" />
+                <h2 className="text-sm font-medium text-white">Connect a Sending Domain</h2>
               </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-1">
               <button
-                type="button"
-                onClick={() => setAddingDomain(false)}
-                className="px-3.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                onClick={() => {
+                  setAddingDomain(false);
+                  setAddError("");
+                }}
+                className="text-zinc-500 hover:text-white text-xs font-mono"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {submitting ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Generating Records...</span>
-                  </>
-                ) : (
-                  "Generate DNS Records"
-                )}
-              </button>
             </div>
-          </form>
-        </div>
-      )}
+
+            <form onSubmit={handleAddDomain} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                  Domain Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="acme.com or mail.acme.com"
+                  value={newDomainInput}
+                  onChange={(e) => setNewDomainInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs text-white font-mono focus:border-zinc-500 focus:outline-none"
+                  disabled={submitting}
+                  autoFocus
+                />
+                <p className="text-[11px] text-zinc-500 font-mono mt-1">
+                  Postvane will generate an RSA-2048 DKIM keypair and DNS records for this domain.
+                </p>
+              </div>
+
+              {addError && (
+                <div className="flex items-center gap-2 p-3 text-xs text-red-400 bg-red-950/40 border border-red-500/30 rounded-lg font-mono">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{addError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setAddingDomain(false)}
+                  className="px-3.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg disabled:opacity-50 transition-colors"
+                >
+                  {submitting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Generating Records...</span>
+                    </>
+                  ) : (
+                    "Generate DNS Records"
+                  )}
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Domains List */}
       {loading ? (
@@ -331,14 +344,16 @@ export default function DomainsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => handleVerifyDns(domain)}
                       disabled={isVerifying}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-50"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? "animate-spin text-white" : ""}`} />
                       <span>{isVerifying ? "Verifying..." : "Verify DNS"}</span>
-                    </button>
+                    </motion.button>
 
                     <button
                       onClick={() => handleDeleteDomain(domain)}
@@ -359,110 +374,118 @@ export default function DomainsPage() {
                 </div>
 
                 {/* Collapsible DNS Records Table */}
-                {isExpanded && (
-                  <div className="p-5 border-t border-[#262A2E] space-y-4">
-                    <div>
-                      <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">
-                        Required DNS Configuration Records
-                      </h4>
-                      <p className="text-xs text-zinc-500 font-mono">
-                        Add these records to your DNS provider (Cloudflare, Namecheap, Route 53, etc.), then click <strong>Verify DNS</strong>.
-                      </p>
-                    </div>
-
-                    <div className="overflow-x-auto border border-[#262A2E] rounded-lg">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-[#171A1D] text-zinc-400 font-mono text-[11px] uppercase tracking-wider border-b border-[#262A2E]">
-                          <tr>
-                            <th className="py-2.5 px-3 font-medium">Type</th>
-                            <th className="py-2.5 px-3 font-medium">Host / Name</th>
-                            <th className="py-2.5 px-3 font-medium">Value / Target</th>
-                            <th className="py-2.5 px-3 font-medium">Protocol</th>
-                            <th className="py-2.5 px-3 text-right font-medium">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1C2024] font-mono">
-                          {domain.records?.map((record, idx) => {
-                            const nameKey = `${domain.id}-name-${idx}`;
-                            const valKey = `${domain.id}-val-${idx}`;
-
-                            return (
-                              <tr key={idx} className="hover:bg-[#171A1D]/40 transition-colors">
-                                <td className="py-3 px-3 text-white font-medium">
-                                  {record.type}
-                                </td>
-                                <td className="py-3 px-3 max-w-[200px]">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="truncate select-all text-zinc-200" title={record.name}>
-                                      {record.name}
-                                    </span>
-                                    <button
-                                      onClick={() => copyToClipboard(record.name, nameKey)}
-                                      className="text-zinc-500 hover:text-white shrink-0"
-                                      title="Copy Host"
-                                    >
-                                      {copiedKey === nameKey ? (
-                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                      ) : (
-                                        <Copy className="w-3.5 h-3.5" />
-                                      )}
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3 max-w-[340px]">
-                                  <div className="flex items-center gap-1.5">
-                                    <span
-                                      className="truncate select-all text-zinc-400 text-[11px]"
-                                      title={record.value}
-                                    >
-                                      {record.value}
-                                    </span>
-                                    <button
-                                      onClick={() => copyToClipboard(record.value, valKey)}
-                                      className="text-zinc-500 hover:text-white shrink-0"
-                                      title="Copy Value"
-                                    >
-                                      {copiedKey === valKey ? (
-                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                      ) : (
-                                        <Copy className="w-3.5 h-3.5" />
-                                      )}
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3 font-mono">
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#171A1D] border border-[#262A2E] text-zinc-300">
-                                    {record.purpose}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-3 text-right font-mono">
-                                  {record.status === "verified" ? (
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      Active
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
-                                      <Clock className="w-3 h-3" />
-                                      Pending
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="p-3 bg-[#171A1D] border border-[#262A2E] rounded-lg flex items-start gap-2.5 text-xs text-zinc-400 font-mono">
-                      <Info className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-5 border-t border-[#262A2E] space-y-4 overflow-hidden"
+                    >
                       <div>
-                        DNS changes typically propagate worldwide within 2 to 15 minutes.
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-400 mb-1">
+                          Required DNS Configuration Records
+                        </h4>
+                        <p className="text-xs text-zinc-500 font-mono">
+                          Add these records to your DNS provider (Cloudflare, Namecheap, Route 53, etc.), then click <strong>Verify DNS</strong>.
+                        </p>
                       </div>
-                    </div>
-                  </div>
-                )}
+
+                      <div className="overflow-x-auto border border-[#262A2E] rounded-lg">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#171A1D] text-zinc-400 font-mono text-[11px] uppercase tracking-wider border-b border-[#262A2E]">
+                            <tr>
+                              <th className="py-2.5 px-3 font-medium">Type</th>
+                              <th className="py-2.5 px-3 font-medium">Host / Name</th>
+                              <th className="py-2.5 px-3 font-medium">Value / Target</th>
+                              <th className="py-2.5 px-3 font-medium">Protocol</th>
+                              <th className="py-2.5 px-3 text-right font-medium">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#1C2024] font-mono">
+                            {domain.records?.map((record, idx) => {
+                              const nameKey = `${domain.id}-name-${idx}`;
+                              const valKey = `${domain.id}-val-${idx}`;
+
+                              return (
+                                <tr key={idx} className="hover:bg-[#171A1D]/40 transition-colors">
+                                  <td className="py-3 px-3 text-white font-medium">
+                                    {record.type}
+                                  </td>
+                                  <td className="py-3 px-3 max-w-[200px]">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="truncate select-all text-zinc-200" title={record.name}>
+                                        {record.name}
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(record.name, nameKey)}
+                                        className="text-zinc-500 hover:text-white shrink-0"
+                                        title="Copy Host"
+                                      >
+                                        {copiedKey === nameKey ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                        ) : (
+                                          <Copy className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 max-w-[340px]">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className="truncate select-all text-zinc-400 text-[11px]"
+                                        title={record.value}
+                                      >
+                                        {record.value}
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(record.value, valKey)}
+                                        className="text-zinc-500 hover:text-white shrink-0"
+                                        title="Copy Value"
+                                      >
+                                        {copiedKey === valKey ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                        ) : (
+                                          <Copy className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-3 font-mono">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#171A1D] border border-[#262A2E] text-zinc-300">
+                                      {record.purpose}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 text-right font-mono">
+                                    {record.status === "verified" ? (
+                                      <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Active
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
+                                        <Clock className="w-3 h-3" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="p-3 bg-[#171A1D] border border-[#262A2E] rounded-lg flex items-start gap-2.5 text-xs text-zinc-400 font-mono">
+                        <Info className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                        <div>
+                          DNS changes typically propagate worldwide within 2 to 15 minutes.
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}

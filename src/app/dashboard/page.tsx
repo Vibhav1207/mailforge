@@ -6,22 +6,18 @@ import { useAuth } from "@/context/auth-context";
 import { getCampaigns, getContacts } from "@/lib/store/db-service";
 import { Campaign, Contact } from "@/types";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { motion } from "motion/react";
 import {
   Send,
   Users,
-  CheckCircle2,
-  AlertCircle,
   Megaphone,
   ArrowUpRight,
-  TrendingUp,
-  Clock,
-  ShieldCheck,
   Plus,
   RefreshCw,
   Eye,
   Globe,
-  Key,
 } from "lucide-react";
+import { CountUp } from "@/components/motion/CountUp";
 
 export default function DashboardOverviewPage() {
   const { user, profile } = useAuth();
@@ -83,29 +79,40 @@ export default function DashboardOverviewPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => loadDashboardData(true)}
             disabled={loading}
-            className="p-2 text-[#A1A1AA] hover:text-white bg-[#111315] hover:bg-[#171A1D] border border-[#262A2E] rounded-md transition-colors"
+            className="p-2 text-[#A1A1AA] hover:text-white bg-[#111315] hover:bg-[#171A1D] border border-[#262A2E] hover:border-zinc-500 rounded-md transition-colors"
             title="Refresh statistics"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <Link
-            href="/dashboard/compose"
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-[#E5E7EB] text-[#08090A] rounded-md text-xs font-semibold shadow-sm transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Campaign</span>
-          </Link>
+          </motion.button>
+          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+            <Link
+              href="/dashboard/compose"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-[#E5E7EB] text-[#08090A] rounded-md text-xs font-semibold shadow-sm transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Campaign</span>
+            </Link>
+          </motion.div>
         </div>
       </div>
 
       {/* Active Campaign Live Card (If sending) */}
       {activeCampaign && (
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#22C55E]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-lg bg-[#111315] border border-[#22C55E]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
           <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] animate-ping" />
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#22C55E]" />
+            </span>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-[#F5F5F5]">{activeCampaign.name}</span>
@@ -118,57 +125,70 @@ export default function DashboardOverviewPage() {
               </p>
             </div>
           </div>
+
           <Link
             href={`/dashboard/campaigns/${activeCampaign.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-[#171A1D] hover:bg-[#1D2125] text-white border border-[#262A2E]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-[#171A1D] hover:bg-[#1D2125] text-white border border-[#262A2E] hover:border-zinc-500 transition-colors"
           >
             <span>Live Monitor</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
-        </div>
+        </motion.div>
       )}
 
-      {/* KPI Stats Grid */}
+      {/* KPI Stats Grid with CountUp & Hover Lift */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total Sent */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Total Sent</span>
-          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">{formatNumber(totalEmailsSent)}</p>
+          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">
+            <CountUp value={totalEmailsSent} duration={1.2} />
+          </p>
           <span className="text-[10px] text-[#71717A] font-mono mt-1 block">{totalCampaigns} campaigns</span>
         </div>
 
         {/* Confirmed Delivered */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Delivered</span>
-          <p className="text-2xl font-bold font-mono text-[#22C55E] mt-1">{formatNumber(totalDelivered)}</p>
+          <p className="text-2xl font-bold font-mono text-[#22C55E] mt-1">
+            <CountUp value={totalDelivered} duration={1.2} />
+          </p>
           <span className="text-[10px] text-[#22C55E] font-mono mt-1 block">{deliveryRate}% rate</span>
         </div>
 
         {/* Opened Emails */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Opens</span>
-          <p className="text-2xl font-bold font-mono text-white mt-1">{formatNumber(totalOpened)}</p>
+          <p className="text-2xl font-bold font-mono text-white mt-1">
+            <CountUp value={totalOpened} duration={1.2} />
+          </p>
           <span className="text-[10px] text-[#71717A] font-mono mt-1 block">{openRate}% rate</span>
         </div>
 
         {/* Clicked Links */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Clicks</span>
-          <p className="text-2xl font-bold font-mono text-white mt-1">{formatNumber(totalClicked)}</p>
+          <p className="text-2xl font-bold font-mono text-white mt-1">
+            <CountUp value={totalClicked} duration={1.2} />
+          </p>
           <span className="text-[10px] text-[#71717A] font-mono mt-1 block">{clickRate}% CTR</span>
         </div>
 
         {/* Failed / Bounced */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Bounces / Fails</span>
-          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">{formatNumber(totalFailed + totalBounced)}</p>
+          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">
+            <CountUp value={totalFailed + totalBounced} duration={1.0} />
+          </p>
           <span className="text-[10px] text-[#71717A] font-mono mt-1 block">{totalBounced} bnc · {totalFailed} fail</span>
         </div>
 
         {/* Total Contacts */}
-        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E]">
+        <div className="p-4 rounded-lg bg-[#111315] border border-[#262A2E] hover:border-zinc-500 hover:-translate-y-0.5 transition-all duration-200">
           <span className="text-[11px] font-mono uppercase text-[#71717A] block">Audience</span>
-          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">{formatNumber(totalContacts)}</p>
+          <p className="text-2xl font-bold font-mono text-[#F5F5F5] mt-1">
+            <CountUp value={totalContacts} duration={1.2} />
+          </p>
           <span className="text-[10px] text-[#71717A] font-mono mt-1 block">{activeContacts} active</span>
         </div>
       </div>
@@ -200,7 +220,7 @@ export default function DashboardOverviewPage() {
               </p>
               <Link
                 href="/dashboard/compose"
-                className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white text-[#08090A] rounded text-xs font-semibold hover:bg-[#E5E7EB]"
+                className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white text-[#08090A] rounded text-xs font-semibold hover:bg-[#E5E7EB] transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Create Campaign</span>
@@ -214,17 +234,20 @@ export default function DashboardOverviewPage() {
                 const isFailed = cmp.status === "failed";
 
                 return (
-                  <div key={cmp.id} className="p-4 hover:bg-[#171A1D]/50 transition-colors flex items-center justify-between gap-4">
+                  <div
+                    key={cmp.id}
+                    className="p-4 hover:bg-[#171A1D]/70 transition-colors duration-150 flex items-center justify-between gap-4 group"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <Link
                           href={`/dashboard/campaigns/${cmp.id}`}
-                          className="font-medium text-xs text-[#F5F5F5] hover:text-white truncate"
+                          className="font-medium text-xs text-[#F5F5F5] group-hover:text-white transition-colors truncate"
                         >
                           {cmp.name}
                         </Link>
                         <span
-                          className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+                          className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border transition-colors ${
                             isDelivered
                               ? "bg-[#102719] text-[#22C55E] border-[#22C55E]/30"
                               : isSending
@@ -273,14 +296,16 @@ export default function DashboardOverviewPage() {
             <div className="space-y-2">
               <Link
                 href="/dashboard/compose"
-                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] hover:translate-x-0.5 transition-all duration-150 group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-white">
+                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-white group-hover:scale-105 transition-transform">
                     <Send className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-[#F5F5F5] block">Compose Campaign</span>
+                    <span className="text-xs font-semibold text-[#F5F5F5] block group-hover:text-white transition-colors">
+                      Compose Campaign
+                    </span>
                     <span className="text-[11px] text-[#71717A] block">Send personalized batch emails</span>
                   </div>
                 </div>
@@ -289,14 +314,16 @@ export default function DashboardOverviewPage() {
 
               <Link
                 href="/dashboard/contacts"
-                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] hover:translate-x-0.5 transition-all duration-150 group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-white">
+                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-white group-hover:scale-105 transition-transform">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-[#F5F5F5] block">Import Contacts</span>
+                    <span className="text-xs font-semibold text-[#F5F5F5] block group-hover:text-white transition-colors">
+                      Import Contacts
+                    </span>
                     <span className="text-[11px] text-[#71717A] block">Upload CSV or XLSX file</span>
                   </div>
                 </div>
@@ -305,14 +332,16 @@ export default function DashboardOverviewPage() {
 
               <Link
                 href="/dashboard/domains"
-                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] transition-all group"
+                className="flex items-center justify-between p-3 rounded-lg bg-[#0D0F11] hover:bg-[#171A1D] border border-[#1C2024] hover:border-[#262A2E] hover:translate-x-0.5 transition-all duration-150 group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-[#22C55E]">
+                  <div className="w-7 h-7 rounded bg-[#171A1D] flex items-center justify-center text-[#22C55E] group-hover:scale-105 transition-transform">
                     <Globe className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-[#F5F5F5] block">Verify Domain (DKIM)</span>
+                    <span className="text-xs font-semibold text-[#F5F5F5] block group-hover:text-white transition-colors">
+                      Verify Domain (DKIM)
+                    </span>
                     <span className="text-[11px] text-[#71717A] block">SPF, DMARC & DNS keys</span>
                   </div>
                 </div>

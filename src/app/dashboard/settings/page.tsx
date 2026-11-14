@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/context/auth-context";
 import { updateUserSettings } from "@/lib/store/db-service";
 import { apiFetch } from "@/lib/api-client";
@@ -303,22 +304,27 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {statusMessage && (
-        <div
-          className={`p-3.5 border text-xs rounded-xl flex items-center gap-2.5 transition-all font-mono ${
-            statusMessage.type === "success"
-              ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
-              : "bg-red-950/40 border-red-500/30 text-red-400"
-          }`}
-        >
-          {statusMessage.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          )}
-          <span>{statusMessage.text}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {statusMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className={`p-3.5 border text-xs rounded-xl flex items-center gap-2.5 transition-all font-mono ${
+              statusMessage.type === "success"
+                ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+                : "bg-red-950/40 border-red-500/30 text-red-400"
+            }`}
+          >
+            {statusMessage.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            )}
+            <span>{statusMessage.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Profile Overview Card */}
       <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
@@ -376,7 +382,9 @@ export default function SettingsPage() {
           {/* Engine Selector Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Google App Password (Gmail) Card */}
-            <div
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={() => {
                 setDeliveryMethod("gmail_app_password");
                 if (gmailEmail && !fromEmail) setFromEmail(gmailEmail);
@@ -401,10 +409,12 @@ export default function SettingsPage() {
               <p className="text-xs text-zinc-400 leading-relaxed font-mono">
                 Connect your personal or Workspace Gmail via a 16-character Google App Password. Port 465 SSL.
               </p>
-            </div>
+            </motion.div>
 
             {/* Custom SMTP Server Card */}
-            <div
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={() => setDeliveryMethod("custom_smtp")}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${
                 deliveryMethod === "custom_smtp"
@@ -424,7 +434,7 @@ export default function SettingsPage() {
               <p className="text-xs text-zinc-400 leading-relaxed font-mono">
                 Connect any external mail server (AWS SES, Brevo, Postmark, or private VPS host).
               </p>
-            </div>
+            </motion.div>
           </div>
 
           {/* GMAIL APP PASSWORD CONFIGURATION PANEL */}
@@ -875,14 +885,16 @@ export default function SettingsPage() {
 
         {/* Save Configuration Button */}
         <div className="flex justify-end pt-2">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={saving}
             className="inline-flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-xs font-medium shadow-sm transition-all disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? "Saving..." : "Save Configuration"}</span>
-          </button>
+          </motion.button>
         </div>
       </form>
     </div>

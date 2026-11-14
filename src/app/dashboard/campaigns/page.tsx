@@ -11,6 +11,7 @@ import {
 } from "@/lib/store/db-service";
 import { Campaign } from "@/types";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { motion } from "motion/react";
 import {
   Megaphone,
   Plus,
@@ -110,21 +111,25 @@ export default function CampaignsPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => loadData(true)}
             disabled={loading}
-            className="p-2 text-[#A1A1AA] hover:text-white bg-[#111315] hover:bg-[#171A1D] border border-[#262A2E] rounded-md transition-colors"
+            className="p-2 text-[#A1A1AA] hover:text-white bg-[#111315] hover:bg-[#171A1D] border border-[#262A2E] hover:border-zinc-500 rounded-md transition-colors"
             title="Refresh"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <Link
-            href="/dashboard/compose"
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-[#08090A] bg-white hover:bg-[#E5E7EB] rounded-md shadow-sm transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Campaign</span>
-          </Link>
+          </motion.button>
+          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+            <Link
+              href="/dashboard/compose"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-[#08090A] bg-white hover:bg-[#E5E7EB] rounded-md shadow-sm transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Campaign</span>
+            </Link>
+          </motion.div>
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import {
 import { Contact, ContactStatus } from "@/types";
 import { formatDate, isValidEmail } from "@/lib/utils";
 import { parseSpreadsheetFile } from "@/lib/spreadsheet";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Users,
   Search,
@@ -292,30 +293,39 @@ export default function ContactsManagementPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={handleExportCsv}
             disabled={contacts.length === 0}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span>Export CSV</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={() => setImportModalOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
           >
             <Upload className="w-3.5 h-3.5 text-zinc-400" />
             <span>Import Excel / CSV</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18 }}
             onClick={openAddModal}
             className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Contact</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -466,17 +476,30 @@ export default function ContactsManagementPage() {
       </div>
 
       {/* MODAL: Add / Edit Contact */}
-      {contactModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
-              <h3 className="text-sm font-medium text-white">
-                {editingContact ? "Edit Contact" : "Add New Contact"}
-              </h3>
-              <button onClick={() => setContactModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <AnimatePresence>
+        {contactModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+                <h3 className="text-sm font-medium text-white">
+                  {editingContact ? "Edit Contact" : "Add New Contact"}
+                </h3>
+                <button onClick={() => setContactModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
             {formError && (
               <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-400 text-xs rounded-lg flex items-center gap-2 font-mono">
@@ -584,67 +607,82 @@ export default function ContactsManagementPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL: Import CSV Contacts */}
-      {importModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
-              <h3 className="text-sm font-medium text-white">Import Contacts from Excel or CSV</h3>
-              <button onClick={() => setImportModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <label className="border border-dashed border-[#262A2E] hover:border-zinc-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-[#171A1D]/40">
-              <FileSpreadsheet className="w-8 h-8 text-zinc-400 mb-2" />
-              <span className="text-xs font-medium text-white">
-                Select Excel (.xlsx, .xls) or CSV file
-              </span>
-              <span className="text-[11px] text-zinc-500 font-mono mt-1">
-                Auto-detects email, firstName, lastName, company, and custom fields.
-              </span>
-              <input type="file" accept=".xlsx,.xls,.csv,.tsv" onChange={handleCsvFile} className="hidden" />
-            </label>
-
-            {csvPreviewRows.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs font-mono text-zinc-400">
-                  <span>Preview ({csvTotalCount} rows detected):</span>
-                </div>
-                <div className="max-h-40 overflow-y-auto border border-[#262A2E] rounded-lg p-2.5 bg-[#171A1D] font-mono text-[11px] text-zinc-300">
-                  {csvPreviewRows.map((r, i) => (
-                    <div key={i} className="truncate border-b border-[#262A2E] pb-1 mb-1">
-                      {JSON.stringify(r)}
-                    </div>
-                  ))}
-                </div>
+      <AnimatePresence>
+        {importModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-lg w-full p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+                <h3 className="text-sm font-medium text-white">Import Contacts from Excel or CSV</h3>
+                <button onClick={() => setImportModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            )}
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
-              <button
-                type="button"
-                onClick={() => setImportModalOpen(false)}
-                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCommitCsvImport}
-                disabled={csvTotalCount === 0}
-                className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-40"
-              >
-                Import {csvTotalCount} Contacts
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <label className="border border-dashed border-[#262A2E] hover:border-zinc-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-[#171A1D]/40">
+                <FileSpreadsheet className="w-8 h-8 text-zinc-400 mb-2" />
+                <span className="text-xs font-medium text-white">
+                  Select Excel (.xlsx, .xls) or CSV file
+                </span>
+                <span className="text-[11px] text-zinc-500 font-mono mt-1">
+                  Auto-detects email, firstName, lastName, company, and custom fields.
+                </span>
+                <input type="file" accept=".xlsx,.xls,.csv,.tsv" onChange={handleCsvFile} className="hidden" />
+              </label>
+
+              {csvPreviewRows.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-mono text-zinc-400">
+                    <span>Preview ({csvTotalCount} rows detected):</span>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border border-[#262A2E] rounded-lg p-2.5 bg-[#171A1D] font-mono text-[11px] text-zinc-300">
+                    {csvPreviewRows.map((r, i) => (
+                      <div key={i} className="truncate border-b border-[#262A2E] pb-1 mb-1">
+                        {JSON.stringify(r)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
+                <button
+                  type="button"
+                  onClick={() => setImportModalOpen(false)}
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCommitCsvImport}
+                  disabled={csvTotalCount === 0}
+                  className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  Import {csvTotalCount} Contacts
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

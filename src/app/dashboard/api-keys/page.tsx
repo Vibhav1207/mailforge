@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { apiFetch } from "@/lib/api-client";
 import {
   Key,
@@ -130,110 +131,130 @@ export default function ApiKeysPage() {
           </p>
         </div>
 
-        <button
+        <motion.button
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setCreating(true)}
           className="inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white rounded-lg hover:bg-zinc-200 transition-colors shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Create API Key</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* Secret Key Revealed Banner (One-Time Display) */}
-      {newlyCreatedKey && (
-        <div className="bg-[#111315] border border-emerald-500/30 rounded-xl p-5 space-y-3 font-mono">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-400 font-medium text-xs">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              API Key Generated Successfully
+      <AnimatePresence>
+        {newlyCreatedKey && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -6 }}
+            className="bg-[#111315] border border-emerald-500/30 rounded-xl p-5 space-y-3 font-mono"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-400 font-medium text-xs">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                API Key Generated Successfully
+              </div>
+              <button
+                onClick={() => setNewlyCreatedKey(null)}
+                className="text-xs text-zinc-400 hover:text-white"
+              >
+                Done & Dismiss
+              </button>
             </div>
-            <button
-              onClick={() => setNewlyCreatedKey(null)}
-              className="text-xs text-zinc-400 hover:text-white"
-            >
-              Done & Dismiss
-            </button>
-          </div>
 
-          <p className="text-xs text-zinc-400">
-            Copy this secret key now. For your security, it will <strong>never be shown again</strong>.
-          </p>
+            <p className="text-xs text-zinc-400">
+              Copy this secret key now. For your security, it will <strong>never be shown again</strong>.
+            </p>
 
-          <div className="flex items-center gap-2 bg-[#171A1D] border border-[#262A2E] p-2.5 rounded-lg">
-            <code className="text-xs text-white flex-1 select-all break-all">
-              {newlyCreatedKey}
-            </code>
-            <button
-              onClick={() => copyToClipboard(newlyCreatedKey, "created-key")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-md shrink-0 transition-colors"
-            >
-              {copiedKey === "created-key" ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-black" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy Secret
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="flex items-center gap-2 bg-[#171A1D] border border-[#262A2E] p-2.5 rounded-lg">
+              <code className="text-xs text-white flex-1 select-all break-all">
+                {newlyCreatedKey}
+              </code>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => copyToClipboard(newlyCreatedKey, "created-key")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-md shrink-0 transition-colors"
+              >
+                {copiedKey === "created-key" ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-black" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy Secret
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Create Key Drawer */}
-      {creating && (
-        <div className="bg-[#111315] border border-[#262A2E] rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-zinc-400" />
-              <h2 className="text-sm font-medium text-white">Create New API Key</h2>
-            </div>
-            <button
-              onClick={() => setCreating(false)}
-              className="text-zinc-500 hover:text-white text-xs font-mono"
-            >
-              Cancel
-            </button>
-          </div>
-
-          <form onSubmit={handleCreateKey} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
-                Key Identifier
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Production Backend, Next.js Server"
-                value={keyName}
-                onChange={(e) => setKeyName(e.target.value)}
-                className="w-full px-3 py-2 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs text-white font-mono focus:border-zinc-500 focus:outline-none"
-                disabled={submitting}
-                autoFocus
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
+      <AnimatePresence>
+        {creating && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-[#111315] border border-[#262A2E] rounded-xl p-5 space-y-4 overflow-hidden"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-zinc-400" />
+                <h2 className="text-sm font-medium text-white">Create New API Key</h2>
+              </div>
               <button
-                type="button"
                 onClick={() => setCreating(false)}
-                className="px-3.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                className="text-zinc-500 hover:text-white text-xs font-mono"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={submitting || !keyName.trim()}
-                className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {submitting ? "Generating..." : "Generate Key"}
-              </button>
             </div>
-          </form>
-        </div>
-      )}
+
+            <form onSubmit={handleCreateKey} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                  Key Identifier
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Production Backend, Next.js Server"
+                  value={keyName}
+                  onChange={(e) => setKeyName(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs text-white font-mono focus:border-zinc-500 focus:outline-none"
+                  disabled={submitting}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setCreating(false)}
+                  className="px-3.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={submitting || !keyName.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg disabled:opacity-50 transition-colors"
+                >
+                  {submitting ? "Generating..." : "Generate Key"}
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Keys List */}
       <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">

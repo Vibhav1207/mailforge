@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard,
   Send,
@@ -20,6 +21,7 @@ import {
   Key,
   Plus,
 } from "lucide-react";
+import { PageTransition } from "@/components/motion/PageTransition";
 
 const NAVIGATION_ITEMS = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -58,12 +60,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] flex font-sans selection:bg-white/10 selection:text-white">
       {/* Mobile Drawer Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Component */}
       <aside
@@ -76,9 +84,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Logo & Workspace Brand */}
             <div className="h-16 px-5 border-b border-[#1C2024] flex items-center justify-between">
               <Link href="/dashboard" className="flex items-center gap-2.5 group">
-                <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center text-[#08090A] shadow-sm transition-transform group-hover:scale-105">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-7 h-7 rounded-md bg-white flex items-center justify-center text-[#08090A] shadow-sm transition-transform"
+                >
                   <Mail className="w-4 h-4 fill-current" />
-                </div>
+                </motion.div>
                 <div>
                   <span className="font-semibold text-sm text-[#F5F5F5] tracking-tight block">Postvane</span>
                   <span className="text-[10px] font-mono text-[#71717A] tracking-wider uppercase block">Console</span>
@@ -94,16 +106,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Quick Action Button: New Campaign */}
             <div className="px-3 pt-4 pb-2">
-              <Link
-                href="/dashboard/compose"
-                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-[#E5E7EB] text-[#08090A] rounded-md text-xs font-semibold shadow-sm transition-all active:scale-[0.99]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Campaign</span>
-              </Link>
+              <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.18 }}>
+                <Link
+                  href="/dashboard/compose"
+                  className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-[#E5E7EB] text-[#08090A] rounded-md text-xs font-semibold shadow-sm transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Campaign</span>
+                </Link>
+              </motion.div>
             </div>
 
-            {/* Navigation Links */}
+            {/* Navigation Links with animated active indicator */}
             <nav className="px-3 py-3 space-y-1">
               {NAVIGATION_ITEMS.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -114,13 +128,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                    className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                       isActive
-                        ? "bg-[#171A1D] text-white border border-[#262A2E]"
-                        : "text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-[#111315]"
+                        ? "text-white"
+                        : "text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-[#111315]/70"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#71717A]"}`} />
+                    {isActive && (
+                      <motion.span
+                        layoutId="active-sidebar-pill"
+                        className="absolute inset-0 bg-[#171A1D] border border-[#262A2E] rounded-md -z-10"
+                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <Icon
+                      className={`w-4 h-4 transition-transform duration-150 group-hover:translate-x-0.5 ${
+                        isActive ? "text-white" : "text-[#71717A]"
+                      }`}
+                    />
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -130,7 +155,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User Profile & Sign Out Footer */}
           <div className="p-3 border-t border-[#1C2024] bg-[#0D0F11]">
-            <div className="flex items-center justify-between p-2 rounded-md bg-[#111315] border border-[#1C2024]">
+            <div className="flex items-center justify-between p-2 rounded-md bg-[#111315] border border-[#1C2024] hover:border-[#262A2E] transition-colors">
               <div className="flex items-center gap-2.5 min-w-0">
                 {photoUrl ? (
                   <img
@@ -149,13 +174,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSignOut}
                 className="p-1.5 text-[#71717A] hover:text-[#EF4444] rounded hover:bg-[#171A1D] transition-colors"
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -179,9 +206,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </header>
 
-        {/* Page Container */}
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
-          {children}
+        {/* Dashboard Dynamic Page View with Smooth Entrance */}
+        <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <PageTransition key={pathname}>
+            {children}
+          </PageTransition>
         </main>
       </div>
     </div>
