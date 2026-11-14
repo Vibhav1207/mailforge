@@ -126,6 +126,7 @@ export interface EmailTemplate {
   category: "outreach" | "event" | "announcement" | "followup" | "newsletter" | "custom";
   imageUrl?: string; // Optional template header/banner image stored in MongoDB or URL
   folder?: string;   // Optional template folder categorization (e.g. "Newsletters", "Banners")
+  attachments?: EmailAttachment[]; // Optional default attachments (e.g. PDF brochures)
   htmlContent: string;
   textContent?: string;
   isDefault?: boolean;

@@ -75,6 +75,7 @@ export const templateSchema = z.object({
   description: z.string().max(2000).default(""),
   folder: folderSchema,
   imageUrl: z.union([z.string().url().refine((value) => /^https?:\/\//i.test(value)), z.literal("")]).optional(),
+  attachments: z.array(attachmentSchema).max(5).optional(),
   htmlContent: z.string().min(1).max(300_000),
   textContent: z.string().max(300_000).optional(),
 });

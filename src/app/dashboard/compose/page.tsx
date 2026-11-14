@@ -196,11 +196,20 @@ export default function ComposeEmailPage() {
         setSavedContacts(cnts);
         setAvailableTemplates(tmpls);
 
-        // Load default template if empty
-        if (tmpls.length > 0 && !htmlContent) {
-          setSubject(tmpls[0].subject);
-          setHtmlContent(tmpls[0].htmlContent);
-          setTextContent(tmpls[0].textContent || "");
+        // Load requested or default template if empty
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const requestedTmplId = urlParams?.get("templateId");
+        const initialTmpl = requestedTmplId
+          ? tmpls.find((t) => t.id === requestedTmplId) || tmpls[0]
+          : (tmpls.length > 0 ? tmpls[0] : null);
+
+        if (initialTmpl && !htmlContent) {
+          setSubject(initialTmpl.subject);
+          setHtmlContent(initialTmpl.htmlContent);
+          setTextContent(initialTmpl.textContent || "");
+          if (initialTmpl.attachments && initialTmpl.attachments.length > 0) {
+            setAttachments(initialTmpl.attachments);
+          }
         }
       } catch (err) {
         console.error("Failed to load initial composer data:", err);
@@ -1348,15 +1357,26 @@ david@cloudscale.net"
                     setSubject(tmpl.subject);
                     setHtmlContent(tmpl.htmlContent);
                     setTextContent(tmpl.textContent || htmlToPlainText(tmpl.htmlContent));
+                    if (tmpl.attachments && tmpl.attachments.length > 0) {
+                      setAttachments(tmpl.attachments);
+                    }
                     setTemplateModalOpen(false);
                   }}
                   className="p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-sm cursor-pointer transition-all bg-white"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-900">{tmpl.name}</span>
-                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                      {tmpl.category}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {tmpl.attachments && tmpl.attachments.length > 0 && (
+                        <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 flex items-center gap-0.5">
+                          <Paperclip className="w-2.5 h-2.5 text-rose-500" />
+                          <span>{tmpl.attachments.length}</span>
+                        </span>
+                      )}
+                      <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {tmpl.category}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-slate-500 line-clamp-2 mt-1">{tmpl.description}</p>
                 </div>

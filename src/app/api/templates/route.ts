@@ -14,6 +14,7 @@ const ALLOWED_TEMPLATE_FIELDS = [
   "description",
   "folder",
   "imageUrl",
+  "attachments",
   "htmlContent",
   "textContent",
 ] as const;
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser(req);
-    const input = await parseJson(req, templateSchema, 650_000);
+    const input = await parseJson(req, templateSchema, 5_000_000);
     const cleanInput = sanitizeMongoInput(input);
     const id = cleanInput.id || `tpl_${randomUUID()}`;
     const collection = (await getMongoDb()).collection("email_templates");

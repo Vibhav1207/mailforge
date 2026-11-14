@@ -10,7 +10,7 @@ import {
   deleteTemplate,
 } from "@/lib/store/db-service";
 import { apiFetch } from "@/lib/api-client";
-import { EmailTemplate, TemplateImage } from "@/types";
+import { EmailTemplate, TemplateImage, EmailAttachment } from "@/types";
 import { PREBUILT_TEMPLATES } from "@/lib/email/templates";
 import { formatDate } from "@/lib/utils";
 import {
@@ -33,6 +33,9 @@ import {
   Code2,
   Database,
   Check,
+  Paperclip,
+  FileText,
+  AlertCircle,
 } from "lucide-react";
 
 export default function TemplatesPage() {
@@ -60,6 +63,8 @@ export default function TemplatesPage() {
   const [modalHtml, setModalHtml] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [modalAttachments, setModalAttachments] = useState<EmailAttachment[]>([]);
+  const [modalAttachmentError, setModalAttachmentError] = useState<string | null>(null);
 
   // MongoDB Image Assets Library Modal
   const [imageLibraryOpen, setImageLibraryOpen] = useState(false);
@@ -133,6 +138,8 @@ export default function TemplatesPage() {
     setModalCategory("custom");
     setModalFolder("general");
     setModalImageUrl("");
+    setModalAttachments([]);
+    setModalAttachmentError(null);
     setModalDescription("");
     setModalHtml(`<!DOCTYPE html>
 <html>
@@ -154,9 +161,53 @@ export default function TemplatesPage() {
     setModalCategory(t.category);
     setModalFolder(t.folder || "general");
     setModalImageUrl(t.imageUrl || "");
+    setModalAttachments(t.attachments || []);
+    setModalAttachmentError(null);
     setModalDescription(t.description || "");
     setModalHtml(t.htmlContent);
     setEditModalOpen(true);
+  };
+
+  const handleModalAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setModalAttachmentError(null);
+
+    if (modalAttachments.length + files.length > 5) {
+      setModalAttachmentError("You can attach up to 5 files per template.");
+      e.target.value = "";
+      return;
+    }
+
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) {
+        setModalAttachmentError(`File "${file.name}" is too large (max 4 MB per attachment).`);
+        e.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(",") ? result.split(",")[1] : result;
+        setModalAttachments((prev) => [
+          ...prev,
+          {
+            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            size: file.size,
+            contentBase64: base64,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  };
+
+  const removeModalAttachment = (idOrIndex: string | number) => {
+    setModalAttachments((prev) => prev.filter((a, idx) => a.id !== idOrIndex && idx !== idOrIndex));
   };
 
   // Upload image to MongoDB folder
@@ -224,13 +275,14 @@ export default function TemplatesPage() {
   const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     const toSave: EmailTemplate = {
-      id: editingTemplate?.id || `tpl_custom_${Date.now()}`,
+      id: editingTemplate?.userId ? editingTemplate.id : `tpl_custom_${Date.now()}`,
       userId,
       name: modalName,
       subject: modalSubject,
       category: modalCategory,
       folder: modalFolder || "general",
       imageUrl: modalImageUrl || undefined,
+      attachments: modalAttachments.length ? modalAttachments : undefined,
       description: modalDescription,
       htmlContent: modalHtml,
       createdAt: editingTemplate?.createdAt || new Date().toISOString(),
@@ -457,6 +509,12 @@ export default function TemplatesPage() {
                         {t.folder}
                       </span>
                     )}
+                    {t.attachments && t.attachments.length > 0 && (
+                      <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 flex items-center gap-1">
+                        <Paperclip className="w-2.5 h-2.5 text-rose-500" />
+                        <span>{t.attachments.length} File{t.attachments.length > 1 ? "s" : ""}</span>
+                      </span>
+                    )}
                   </div>
 
                   {!t.userId && (
@@ -498,23 +556,22 @@ export default function TemplatesPage() {
                     <Copy className="w-4 h-4" />
                   </button>
 
+                  <button
+                    onClick={() => handleOpenEdit(t)}
+                    title={t.userId ? "Edit Template" : "Customize & Edit Template"}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
                   {t.userId && (
-                    <>
-                      <button
-                        onClick={() => handleOpenEdit(t)}
-                        title="Edit Template"
-                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        title="Delete Template"
-                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      title="Delete Template"
+                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
 
@@ -683,6 +740,84 @@ export default function TemplatesPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Template Attachments (PDF & Documents) */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Template Attachments (PDF, Documents)</span>
+                      {modalAttachments.length > 0 && (
+                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-medium">
+                          {modalAttachments.length}/5
+                        </span>
+                      )}
+                    </label>
+                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs text-slate-700">
+                      <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Attach PDF / File</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,application/pdf,image/*,.doc,.docx,.txt,.csv"
+                        onChange={handleModalAttachmentChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {modalAttachmentError && (
+                    <div className="flex items-center gap-1.5 text-rose-600 text-xs bg-rose-50 p-2 rounded-lg border border-rose-200">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{modalAttachmentError}</span>
+                    </div>
+                  )}
+
+                  {modalAttachments.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {modalAttachments.map((file, fileIdx) => {
+                        const isPdf = file.filename.toLowerCase().endsWith(".pdf") || file.contentType.includes("pdf");
+                        const sizeFormatted = file.size < 1024 * 1024
+                          ? `${(file.size / 1024).toFixed(1)} KB`
+                          : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+                        return (
+                          <div
+                            key={file.id || fileIdx}
+                            className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`p-1.5 rounded ${isPdf ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div className="truncate">
+                                <span className="text-xs font-medium text-slate-800 block truncate">
+                                  {file.filename}
+                                </span>
+                                <span className="text-[10.5px] text-slate-400 font-mono">
+                                  {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeModalAttachment(file.id || fileIdx)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              title="Remove attachment"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-2.5 px-3 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
+                      <p className="text-[11px] text-slate-500">
+                        Optional: attach default PDF brochures or documents to this template.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
