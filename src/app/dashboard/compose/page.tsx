@@ -10,7 +10,7 @@ import {
   saveCampaign,
 } from "@/lib/store/db-service";
 import { apiFetch } from "@/lib/api-client";
-import { Contact, EmailTemplate, Campaign } from "@/types";
+import { Contact, EmailTemplate, Campaign, EmailAttachment } from "@/types";
 import {
   parseSpreadsheetFile,
   SpreadsheetColumnDetection,
@@ -53,6 +53,7 @@ import {
   Server,
   FileSpreadsheet,
   CheckCheck,
+  Paperclip,
 } from "lucide-react";
 
 interface RecipientItem {
@@ -118,6 +119,52 @@ export default function ComposeEmailPage() {
   const [previewRecipientIndex, setPreviewRecipientIndex] = useState(0);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Attachments State (PDF & Documents)
+  const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setAttachmentError(null);
+
+    if (attachments.length + files.length > 5) {
+      setAttachmentError("You can attach up to 5 files per email.");
+      e.target.value = "";
+      return;
+    }
+
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) {
+        setAttachmentError(`File "${file.name}" is too large (max 4 MB per attachment).`);
+        e.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(",") ? result.split(",")[1] : result;
+        setAttachments((prev) => [
+          ...prev,
+          {
+            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            size: file.size,
+            contentBase64: base64,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  };
+
+  const removeAttachment = (idOrIndex: string | number) => {
+    setAttachments((prev) => prev.filter((a, idx) => a.id !== idOrIndex && idx !== idOrIndex));
+  };
 
   // Auto-Save Draft State
   const [draftId, setDraftId] = useState<string>(`draft_${Date.now()}`);
@@ -198,7 +245,7 @@ export default function ComposeEmailPage() {
       await autoSaveDraft();
     }, 4000);
     return () => clearTimeout(timer);
-  }, [subject, htmlContent, fromName, fromEmail, recipients, campaignName]);
+  }, [subject, htmlContent, fromName, fromEmail, recipients, campaignName, attachments]);
 
   const autoSaveDraft = async () => {
     try {
@@ -213,6 +260,7 @@ export default function ComposeEmailPage() {
         replyTo,
         htmlContent,
         textContent: textContent || htmlToPlainText(htmlContent),
+        attachments: attachments.length ? attachments : undefined,
         recipientCount: recipients.length,
         status: "draft",
         stats: { total: recipients.length, sent: 0, delivered: 0, bounced: 0, failed: 0, unsubscribed: 0 },
@@ -382,6 +430,7 @@ export default function ComposeEmailPage() {
           fromName,
           fromEmail,
           replyTo,
+          attachments: attachments.length ? attachments : undefined,
           smtpConfig: profile?.settings?.smtp?.pass
             ? profile.settings.smtp
             : profile?.settings?.gmail?.appPassword
@@ -444,6 +493,7 @@ export default function ComposeEmailPage() {
         replyTo,
         htmlContent,
         textContent: textContent || htmlToPlainText(htmlContent),
+        attachments: attachments.length ? attachments : undefined,
         recipientCount: activeSelectedRecipients.length,
         status: "scheduled",
         scheduledFor: new Date(scheduleDateTime).toISOString(),
@@ -492,6 +542,7 @@ export default function ComposeEmailPage() {
           idempotencyKey: `idemp_${campaignId}`,
           trackOpens,
           trackClicks,
+          attachments: attachments.length ? attachments : undefined,
           smtpConfig: profile?.settings?.smtp?.pass
             ? profile.settings.smtp
             : profile?.settings?.gmail?.appPassword
@@ -1193,6 +1244,87 @@ david@cloudscale.net"
                 className="w-full p-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
+
+            {/* Email Attachments (PDF & Documents) Section */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Attachments (PDF, Documents, Images)</span>
+                  {attachments.length > 0 && (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-medium">
+                      {attachments.length}/5
+                    </span>
+                  )}
+                </label>
+                <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs text-slate-700">
+                  <Upload className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Attach PDF / File</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,application/pdf,image/*,.doc,.docx,.txt,.csv"
+                    onChange={handleAttachmentChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {attachmentError && (
+                <div className="flex items-center gap-1.5 text-rose-600 text-xs bg-rose-50 p-2 rounded-lg border border-rose-200">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{attachmentError}</span>
+                </div>
+              )}
+
+              {attachments.length === 0 ? (
+                <div className="text-center py-3 px-3 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
+                  <p className="text-xs text-slate-500">
+                    No files attached. Click <strong className="text-slate-700 font-medium">Attach PDF / File</strong> to include PDF documents or files with this email.
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Supports PDF, images, documents (up to 4 MB per file, max 5 attachments)
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {attachments.map((file, fileIdx) => {
+                    const isPdf = file.filename.toLowerCase().endsWith(".pdf") || file.contentType.includes("pdf");
+                    const sizeFormatted = file.size < 1024 * 1024
+                      ? `${(file.size / 1024).toFixed(1)} KB`
+                      : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+                    return (
+                      <div
+                        key={file.id || fileIdx}
+                        className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`p-1.5 rounded ${isPdf ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="truncate">
+                            <span className="text-xs font-medium text-slate-800 block truncate">
+                              {file.filename}
+                            </span>
+                            <span className="text-[10.5px] text-slate-400 font-mono">
+                              {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(file.id || fileIdx)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          title="Remove attachment"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1285,6 +1417,14 @@ david@cloudscale.net"
                 <span className="font-semibold text-slate-600">Subject: </span>
                 <span className="text-slate-900 font-medium">{previewSubject}</span>
               </div>
+              {attachments.length > 0 && (
+                <div>
+                  <span className="font-semibold text-slate-600">Attachments: </span>
+                  <span className="text-blue-700 font-medium">
+                    {attachments.map((a) => a.filename).join(", ")} ({attachments.length} file{attachments.length > 1 ? "s" : ""})
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Rendered HTML Body */}
@@ -1329,6 +1469,12 @@ david@cloudscale.net"
                 <span className="text-blue-700">Suppression Check:</span>
                 <span className="font-medium text-emerald-700">Enabled</span>
               </div>
+              {attachments.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Attachments:</span>
+                  <span className="font-bold">{attachments.length} file(s) ({attachments.map((a) => a.filename).join(", ")})</span>
+                </div>
+              )}
             </div>
 
             {/* Schedule Option */}

@@ -23,6 +23,13 @@ export interface SendSingleEmailParams {
   recipientId?: string;
   trackOpens?: boolean;
   trackClicks?: boolean;
+  attachments?: Array<{
+    filename: string;
+    contentType?: string;
+    contentBase64?: string;
+    content?: Buffer | string;
+    encoding?: string;
+  }>;
   smtpConfig: SmtpConfig;
   /** Reuse the campaign's pooled SMTP connection instead of reconnecting per recipient. */
   transport?: Transporter;
@@ -89,6 +96,11 @@ export function renderEmail(params: SendSingleEmailParams) {
       "List-Unsubscribe": `<${appUrl()}/api/unsubscribe?token=${encodeURIComponent(signEmailLink(link))}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     } : undefined,
+    attachments: params.attachments?.map((att) => ({
+      filename: att.filename,
+      content: att.contentBase64 ? Buffer.from(att.contentBase64.replace(/^data:[^;]+;base64,/, ""), "base64") : att.content,
+      contentType: att.contentType,
+    })),
     disableFileAccess: true, disableUrlAccess: true,
   };
 }

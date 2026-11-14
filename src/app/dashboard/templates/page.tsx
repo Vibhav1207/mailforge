@@ -9,6 +9,7 @@ import {
   saveTemplate,
   deleteTemplate,
 } from "@/lib/store/db-service";
+import { apiFetch } from "@/lib/api-client";
 import { EmailTemplate, TemplateImage } from "@/types";
 import { PREBUILT_TEMPLATES } from "@/lib/email/templates";
 import { formatDate } from "@/lib/utils";
@@ -77,9 +78,10 @@ export default function TemplatesPage() {
 
       // 2. Also try fetching templates from MongoDB /api/templates
       try {
-        const mongoRes = await fetch("/api/templates");
+        const mongoRes = await apiFetch("/api/templates");
         if (mongoRes.ok) {
-          const mongoData = await mongoRes.json();
+          const text = await mongoRes.text();
+          const mongoData = text ? JSON.parse(text) : {};
           if (mongoData.templates && mongoData.templates.length > 0) {
             // Merge MongoDB templates with prebuilt & local templates
             const existingIds = new Set(data.map((t) => t.id));
@@ -106,9 +108,10 @@ export default function TemplatesPage() {
     setLoadingImages(true);
     try {
       const q = folder && folder !== "all" ? `?folder=${encodeURIComponent(folder)}` : "";
-      const res = await fetch(`/api/templates/images${q}`);
+      const res = await apiFetch(`/api/templates/images${q}`);
       if (res.ok) {
-        const data = await res.json();
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
         setMongoImages(data.images || []);
       }
     } catch (err) {
@@ -165,16 +168,32 @@ export default function TemplatesPage() {
     setUploadError(null);
 
     try {
+      if (!file.type.startsWith("image/")) {
+        throw new Error(
+          "Please choose an image file (PNG, JPG, WebP, GIF) for the template header. To attach PDF documents to an email, use the Attachments section in Compose."
+        );
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Image file is too large (maximum 5MB). Please upload a smaller image.");
+      }
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", modalFolder || "general");
 
-      const res = await fetch("/api/templates/images", {
+      const res = await apiFetch("/api/templates/images", {
         method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { error: text || `Upload failed with HTTP ${res.status}` };
+      }
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to upload image to MongoDB");
       }
@@ -222,7 +241,7 @@ export default function TemplatesPage() {
 
     // Sync to MongoDB
     try {
-      await fetch("/api/templates", {
+      await apiFetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toSave),
@@ -260,22 +279,37 @@ export default function TemplatesPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      alert("Please choose an image file (PNG, JPG, WebP, GIF).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large (max 5MB).");
+      return;
+    }
+
     setUploadingLibraryImg(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", uploadLibraryFolder);
 
-      const res = await fetch("/api/templates/images", {
+      const res = await apiFetch("/api/templates/images", {
         method: "POST",
         body: formData,
       });
 
       if (res.ok) {
         await loadMongoImages(libraryFolderFilter);
+      } else {
+        const text = await res.text();
+        let errData: any = {};
+        try { errData = text ? JSON.parse(text) : {}; } catch {}
+        alert(errData.error || `Upload failed (${res.status})`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Library upload error:", err);
+      alert(err.message || "Failed to upload image.");
     } finally {
       setUploadingLibraryImg(false);
       e.target.value = "";
@@ -286,7 +320,7 @@ export default function TemplatesPage() {
   const handleDeleteImage = async (imageId: string) => {
     if (!confirm("Delete this image from MongoDB?")) return;
     try {
-      const res = await fetch(`/api/templates/images/${imageId}`, {
+      const res = await apiFetch(`/api/templates/images/${imageId}`, {
         method: "DELETE",
       });
       if (res.ok) {

@@ -47,6 +47,14 @@ export interface CampaignStats {
   suppressed?: number;
 }
 
+export interface EmailAttachment {
+  id?: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  contentBase64: string;
+}
+
 export interface Campaign {
   id: string;
   userId: string;
@@ -58,6 +66,7 @@ export interface Campaign {
   htmlContent: string;
   textContent?: string;
   templateId?: string;
+  attachments?: EmailAttachment[];
   recipientCount: number;
   status: CampaignStatus;
   scheduledFor?: string | null;

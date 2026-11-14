@@ -24,6 +24,14 @@ export const recipientSchema = z.object({
     z.union([z.string(), z.number(), z.boolean()]).transform((val) => String(val).slice(0, 2000))
   ).refine((fields) => Object.keys(fields).length <= 100, "At most 100 custom fields are allowed.").optional(),
 });
+export const attachmentSchema = z.object({
+  id: z.string().max(128).optional(),
+  filename: z.string().trim().min(1).max(255).regex(/^[^/\\:\*\?"<>\|]+$/, "Invalid filename."),
+  contentType: z.string().trim().max(120).default("application/octet-stream"),
+  size: z.number().int().min(1).max(5 * 1024 * 1024),
+  contentBase64: z.string().max(7 * 1024 * 1024),
+});
+
 export const campaignContentSchema = z.object({
   name: z.string().trim().min(1).max(200),
   subject: headerSchema,
@@ -34,6 +42,7 @@ export const campaignContentSchema = z.object({
   textContent: z.string().max(300_000).optional(),
   trackOpens: z.boolean().optional(),
   trackClicks: z.boolean().optional(),
+  attachments: z.array(attachmentSchema).max(5).optional(),
 });
 export const sendCampaignSchema = campaignContentSchema.extend({
   campaignId: idSchema,

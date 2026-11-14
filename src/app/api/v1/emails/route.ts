@@ -20,6 +20,12 @@ const emailDispatchSchema = z.object({
   reply_to: z.string().optional(),
   replyTo: z.string().optional(),
   headers: z.record(z.string()).optional(),
+  attachments: z.array(z.object({
+    filename: z.string().min(1).max(255),
+    content: z.string().optional(),
+    contentBase64: z.string().optional(),
+    contentType: z.string().optional(),
+  })).max(5).optional(),
   tags: z.array(z.object({ name: z.string(), value: z.string() })).optional(),
 });
 
@@ -85,6 +91,7 @@ export async function POST(req: NextRequest) {
           html: input.html,
           text: input.text,
           replyTo,
+          attachments: input.attachments,
           userId: caller.uid,
           smtpConfig,
         })

@@ -436,6 +436,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
         recipientId: recipient.id,
         trackOpens: campaign.trackOpens,
         trackClicks: campaign.trackClicks,
+        attachments: campaign.attachments,
         smtpConfig: smtp,
         transport,
         variables: {

@@ -1,6 +1,6 @@
 import { ApiError } from "./errors";
 
-export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function imageContentType(bytes: Buffer): string | null {
   if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return "image/png";
@@ -12,7 +12,10 @@ export function imageContentType(bytes: Buffer): string | null {
 
 export function validateImage(bytes: Buffer, declaredType?: string): string {
   if (!bytes.length) throw new ApiError(400, "The image is empty.", "INVALID_IMAGE");
-  if (bytes.length > MAX_IMAGE_BYTES) throw new ApiError(413, "Images must be 3 MB or smaller.", "PAYLOAD_TOO_LARGE");
+  if (bytes.length > MAX_IMAGE_BYTES) throw new ApiError(413, "Images must be 5 MB or smaller.", "PAYLOAD_TOO_LARGE");
+  if (bytes.length >= 4 && bytes.subarray(0, 4).toString("ascii") === "%PDF") {
+    throw new ApiError(400, "PDF files cannot be used as template banner images. To attach a PDF to an email, use the Attachments section in Compose.", "INVALID_IMAGE");
+  }
   const contentType = imageContentType(bytes);
   if (!contentType || (declaredType && declaredType !== "application/octet-stream" && declaredType !== contentType)) throw new ApiError(400, "Upload a valid PNG, JPEG, GIF, or WebP image.", "INVALID_IMAGE");
   return contentType;

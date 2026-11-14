@@ -22,19 +22,21 @@ export async function POST(req: NextRequest) {
     let declared: string | undefined;
     let bytes: Buffer;
     if (req.headers.get("content-type")?.startsWith("multipart/form-data")) {
-      const raw = await readBody(req, MAX_IMAGE_BYTES + 65_536);
       let form: FormData;
       try {
-        form = await new Request(req.url, { method: "POST", headers: { "Content-Type": req.headers.get("content-type")! }, body: new Uint8Array(raw) }).formData();
-      } catch { throw new ApiError(400, "Invalid multipart upload.", "INVALID_IMAGE"); }
+        form = await req.formData();
+      } catch {
+        throw new ApiError(400, "Invalid multipart upload.", "INVALID_IMAGE");
+      }
       const file = form.get("file");
       if (!(file instanceof File)) throw new ApiError(400, "Choose an image file to upload.", "INVALID_IMAGE");
+      if (file.size > MAX_IMAGE_BYTES) throw new ApiError(413, "Images must be 5 MB or smaller.", "PAYLOAD_TOO_LARGE");
       folder = folderSchema.parse(form.get("folder") || "general");
       filename = file.name;
       declared = file.type || undefined;
       bytes = Buffer.from(await file.arrayBuffer());
     } else {
-      const input = await parseJson(req, schema, 4_260_000);
+      const input = await parseJson(req, schema, MAX_IMAGE_BYTES + 65_536);
       folder = input.folder;
       filename = input.filename;
       declared = input.contentType;
