@@ -29,7 +29,7 @@ interface CampaignJob {
   leaseUntil?: number;
   activeRecipientId?: string | null;
 }
-const LEASE_MS = 120_000;
+const LEASE_MS = 30_000;
 
 export function recipientId(campaignId: string, email: string): string {
   return createHash("sha256").update(JSON.stringify([campaignId, email.toLowerCase()])).digest("hex");
@@ -356,13 +356,15 @@ async function reserveRecipient(campaignId: string, owner: string, candidate: Re
   });
 }
 
-export async function processCampaign(campaignId: string, budgetMs = 45_000): Promise<void> {
+export async function processCampaign(campaignId: string, budgetMs = 15_000): Promise<{ finished: boolean; processed: number }> {
   const claimed = await claimJob(campaignId);
-  if (!claimed) return;
+  if (!claimed) return { finished: false, processed: 0 };
   const { owner } = claimed;
   const deadline = Date.now() + budgetMs;
   const isMongo = !isFirebaseAdminConfigured() && isMongoConfigured();
   let transport: Awaited<ReturnType<typeof createSmtpTransport>> | undefined;
+  let processed = 0;
+  let isFinished = false;
 
   try {
     const user = { uid: claimed.job.userId, email: claimed.job.userEmail };
@@ -448,6 +450,14 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
           email: recipient.email,
         },
       });
+
+      if (result.success) {
+        processed++;
+      } else if (result.isTransient) {
+        // Attempt fresh transport reconnect if socket or connection dropped
+        try { transport?.close(); } catch {}
+        try { transport = await createSmtpTransport(smtp); } catch {}
+      }
 
       const retry = !result.success && result.isTransient && !result.ambiguous && recipient.attempts < integerSetting("MAX_SEND_ATTEMPTS", 3, 1, 5);
       const now = new Date().toISOString();
@@ -543,6 +553,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
       if (finalJob && finalJob.leaseOwner === owner && finalJob.state === "running") {
         const moreInitial = finalJob.cursor < finalJob.recipients.length;
         const finished = !moreInitial && !pendingDoc;
+        isFinished = finished;
         const stats = (finalCampDoc as any)?.stats || { failed: 0, sent: 0 };
         const nextRunAt = moreInitial
           ? Date.now()
@@ -580,6 +591,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
         if (job.leaseOwner !== owner || job.state !== "running") return;
         const moreInitial = job.cursor < job.recipients.length;
         const finished = !moreInitial && pending.empty;
+        isFinished = finished;
         const stats = campaignSnap.data()!.stats;
         const nextRunAt = moreInitial ? Date.now() : pending.empty ? Date.now() : Date.parse(pending.docs[0].data().nextAttemptAt);
         tx.update(jobRef, { state: finished ? "done" : "ready", nextRunAt, leaseOwner: null, leaseUntil: 0, activeRecipientId: null });
@@ -591,6 +603,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
         });
       });
     }
+    return { finished: isFinished, processed };
   } catch (error) {
     if (isMongo) {
       const db = await getMongoDb();
@@ -604,7 +617,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
           !job.activeRecipientId
             ? db.collection("campaignJobs").updateOne(
                 { _id: campaignId as any },
-                { $set: { state: "ready", leaseOwner: null, leaseUntil: 0, nextRunAt: Date.now() + 60_000 } }
+                { $set: { state: "ready", leaseOwner: null, leaseUntil: 0, nextRunAt: Date.now() + 5_000 } }
               )
             : Promise.resolve(),
         ]);
@@ -617,7 +630,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
         const latest = await tx.get(jobRef);
         if (latest.data()?.leaseOwner !== owner || latest.data()?.state === "cancelled") return;
         tx.update(cmpRef, { errorMessage: error instanceof ApiError ? error.message : "Processing was interrupted. The worker will resume this campaign.", updatedAt: new Date().toISOString() });
-        if (!latest.data()?.activeRecipientId) tx.update(jobRef, { state: "ready", leaseOwner: null, leaseUntil: 0, nextRunAt: Date.now() + 60_000 });
+        if (!latest.data()?.activeRecipientId) tx.update(jobRef, { state: "ready", leaseOwner: null, leaseUntil: 0, nextRunAt: Date.now() + 5_000 });
       });
     }
     throw error;

@@ -59,24 +59,46 @@ export default function CampaignDetailPage() {
     loadCampaignData();
   }, [campaignId, userId]);
 
+  // Automated Continuous Sending Engine:
+  // Auto-resumes processing batches until 100% of recipients are delivered
   useEffect(() => {
-    if (!campaign || !["queued", "sending"].includes(campaign.status)) return;
+    if (!campaign || !userId) return;
+    if (!["queued", "sending"].includes(campaign.status)) return;
 
-    const refresh = async () => {
+    let isCancelled = false;
+    let isExecuting = false;
+
+    const runAutoStep = async () => {
+      if (isExecuting || isCancelled) return;
+      isExecuting = true;
       try {
-        const [updatedCampaign, updatedRecipients] = await Promise.all([
-          getCampaignById(userId, campaignId),
-          getCampaignRecipients(userId, campaignId),
-        ]);
-        if (updatedCampaign) setCampaign(updatedCampaign);
-        setRecipients(updatedRecipients);
+        const res = await apiFetch(`/api/campaigns/${campaignId}/resume`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && data.campaign) {
+            setCampaign(data.campaign);
+            const updatedRecipients = await getCampaignRecipients(userId, campaignId);
+            if (!isCancelled) setRecipients(updatedRecipients);
+          }
+        } else {
+          // Fall back to reading latest campaign status
+          const updatedCampaign = await getCampaignById(userId, campaignId);
+          if (!isCancelled && updatedCampaign) setCampaign(updatedCampaign);
+        }
       } catch (error) {
-        console.error("Refresh campaign progress error:", error);
+        console.warn("Auto-resume step error:", error);
+      } finally {
+        isExecuting = false;
       }
     };
 
-    const interval = window.setInterval(refresh, 5_000);
-    return () => window.clearInterval(interval);
+    // Kick off immediate step then pulse every 2 seconds
+    runAutoStep();
+    const interval = window.setInterval(runAutoStep, 2_000);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(interval);
+    };
   }, [campaign?.status, campaignId, userId]);
 
   // Retry eligible transient failures without resending succeeded messages
@@ -198,9 +220,16 @@ export default function CampaignDetailPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">{campaign.name}</h1>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
-              {campaign.status.replace("_", " ")}
-            </span>
+            {["queued", "sending"].includes(campaign.status) ? (
+              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+                Auto-Sending Active
+              </span>
+            ) : (
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded border bg-slate-50 text-slate-700 border-slate-200">
+                {campaign.status.replace("_", " ")}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-600 font-mono mt-1">Subject: {campaign.subject}</p>
           <p className="text-xs text-slate-400 mt-0.5">

@@ -576,7 +576,9 @@ export default function ComposeEmailPage() {
         sent: data.stats?.sent || 0,
         failed: data.stats?.failed || 0,
         total: activeSelectedRecipients.length,
-        statusText: "Campaign queued. Delivery continues in the background with a 2 second gap between emails.",
+        statusText: data.finished
+          ? "Campaign delivered successfully!"
+          : "Delivery active. Delivering messages with automatic continuous resume...",
       });
 
       setTimeout(() => {
