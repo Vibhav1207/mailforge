@@ -33,6 +33,7 @@ export default function SendingHistoryPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   useEffect(() => {
+    if (!userId) return;
     async function loadData() {
       setLoading(true);
       try {

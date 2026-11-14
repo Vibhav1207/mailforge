@@ -38,10 +38,11 @@ export default function CampaignsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
+    if (!userId) return;
     setLoading(true);
     try {
-      const data = await getCampaigns(userId);
+      const data = await getCampaigns(userId, forceRefresh);
       setCampaigns(data);
     } catch (err) {
       console.error("Failed to load campaigns:", err);
@@ -51,6 +52,7 @@ export default function CampaignsPage() {
   };
 
   useEffect(() => {
+    if (!userId) return;
     loadData();
   }, [userId]);
 

@@ -12,6 +12,9 @@ export interface DecodedAuthToken {
 let cachedCerts: Record<string, string> | null = null;
 let certsExpiry = 0;
 
+// High-speed in-memory token cache to prevent repeated RSA signature checks on parallel requests
+const tokenCache = new Map<string, { decoded: DecodedAuthToken; expMs: number }>();
+
 async function fetchGooglePublicCerts(): Promise<Record<string, string>> {
   const now = Date.now();
   if (cachedCerts && now < certsExpiry) return cachedCerts;
@@ -19,7 +22,7 @@ async function fetchGooglePublicCerts(): Promise<Record<string, string>> {
   try {
     const res = await fetch(
       "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com",
-      { cache: "no-store" }
+      { next: { revalidate: 3600 } } as any
     );
     if (res.ok) {
       const cacheControl = res.headers.get("cache-control");
@@ -36,6 +39,32 @@ async function fetchGooglePublicCerts(): Promise<Record<string, string>> {
 }
 
 export async function verifyFirebaseIdToken(token: string): Promise<DecodedAuthToken> {
+  const nowMs = Date.now();
+  const cached = tokenCache.get(token);
+  if (cached && cached.expMs > nowMs) {
+    return cached.decoded;
+  }
+
+  const result = await doVerifyFirebaseIdToken(token);
+  // Cache valid token for up to 5 minutes or until token expiration
+  const parts = token.split(".");
+  let expMs = nowMs + 5 * 60 * 1000;
+  if (parts.length === 3) {
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+      if (payload.exp) expMs = Math.min(expMs, payload.exp * 1000);
+    } catch {}
+  }
+  if (tokenCache.size > 1000) {
+    for (const [k, v] of tokenCache.entries()) {
+      if (v.expMs <= nowMs) tokenCache.delete(k);
+    }
+  }
+  tokenCache.set(token, { decoded: result, expMs });
+  return result;
+}
+
+async function doVerifyFirebaseIdToken(token: string): Promise<DecodedAuthToken> {
   // If Firebase Admin service account is configured, use official SDK
   if (isFirebaseAdminConfigured()) {
     try {

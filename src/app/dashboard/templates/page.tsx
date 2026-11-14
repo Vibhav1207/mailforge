@@ -75,32 +75,11 @@ export default function TemplatesPage() {
   const [uploadLibraryFolder, setUploadLibraryFolder] = useState("general");
   const [uploadingLibraryImg, setUploadingLibraryImg] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
+    if (!userId) return;
     setLoading(true);
     try {
-      // 1. Fetch templates from local/firebase store
-      const data = await getTemplates(userId);
-
-      // 2. Also try fetching templates from MongoDB /api/templates
-      try {
-        const mongoRes = await apiFetch("/api/templates");
-        if (mongoRes.ok) {
-          const text = await mongoRes.text();
-          const mongoData = text ? JSON.parse(text) : {};
-          if (mongoData.templates && mongoData.templates.length > 0) {
-            // Merge MongoDB templates with prebuilt & local templates
-            const existingIds = new Set(data.map((t) => t.id));
-            for (const mt of mongoData.templates) {
-              if (!existingIds.has(mt.id)) {
-                data.push(mt);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("MongoDB templates fetch notice:", e);
-      }
-
+      const data = await getTemplates(userId, forceRefresh);
       setTemplates(data);
     } catch (err) {
       console.error("Load templates error:", err);
@@ -127,6 +106,7 @@ export default function TemplatesPage() {
   };
 
   useEffect(() => {
+    if (!userId) return;
     loadData();
   }, [userId]);
 

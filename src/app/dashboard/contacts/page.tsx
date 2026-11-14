@@ -53,10 +53,11 @@ export default function ContactsManagementPage() {
   const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
   const [csvTotalCount, setCsvTotalCount] = useState(0);
 
-  const loadContactsData = async () => {
+  const loadContactsData = async (forceRefresh = false) => {
+    if (!userId) return;
     setLoading(true);
     try {
-      const data = await getContacts(userId);
+      const data = await getContacts(userId, forceRefresh);
       setContacts(data);
     } catch (err) {
       console.error("Failed to load contacts:", err);
@@ -66,6 +67,7 @@ export default function ContactsManagementPage() {
   };
 
   useEffect(() => {
+    if (!userId) return;
     loadContactsData();
   }, [userId]);
 

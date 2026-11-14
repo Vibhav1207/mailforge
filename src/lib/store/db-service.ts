@@ -7,13 +7,47 @@ export { DEFAULT_SETTINGS } from "./defaults";
 
 const jsonBody = (value: unknown, method = "POST"): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) });
 
+// Client-side cache to enable instant tab switching and eliminate redundant network roundtrips
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const clientCache = new Map<string, CacheEntry<any>>();
+const CACHE_TTL_MS = 30_000; // 30s cache TTL
+
+function getFromCache<T>(key: string): T | null {
+  const entry = clientCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    clientCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setToCache<T>(key: string, data: T): void {
+  clientCache.set(key, { data, timestamp: Date.now() });
+}
+
+export function invalidateCache(prefix?: string): void {
+  if (!prefix) {
+    clientCache.clear();
+    return;
+  }
+  for (const key of clientCache.keys()) {
+    if (key.startsWith(prefix)) clientCache.delete(key);
+  }
+}
+
 async function allPages<T>(path: string, key: string): Promise<T[]> {
   const result: T[] = [];
   let cursor: string | null = null;
+  const sep = path.includes("?") ? "&" : "?";
   do {
-    const data: Record<string, unknown> = await apiRequest(`${path}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
-    result.push(...data[key] as T[]);
-    cursor = data.nextCursor as string | null;
+    const query = cursor ? `${sep}cursor=${encodeURIComponent(cursor)}&limit=100` : `${sep}limit=100`;
+    const data: Record<string, unknown> = await apiRequest(`${path}${query}`);
+    result.push(...((data[key] as T[]) || []));
+    cursor = (data.nextCursor as string | null) || null;
   } while (cursor);
   return result;
 }
@@ -23,23 +57,42 @@ export async function syncUserProfile(_user: { uid: string; email: string; displ
 }
 
 export async function updateUserSettings(_userId: string, settings: Partial<UserSettings>): Promise<UserSettings> {
+  invalidateCache("profile");
   return (await apiRequest<{ settings: UserSettings }>("/api/settings", jsonBody(settings, "PATCH"))).settings;
 }
 
-export async function getContacts(_userId: string): Promise<Contact[]> {
-  return (await allPages<Contact>("/api/contacts", "contacts")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export async function getContacts(userId: string, forceRefresh = false): Promise<Contact[]> {
+  if (!userId) return [];
+  const cacheKey = `contacts_${userId}`;
+  if (!forceRefresh) {
+    const cached = getFromCache<Contact[]>(cacheKey);
+    if (cached) return cached;
+  }
+  const contacts = (await allPages<Contact>("/api/contacts", "contacts")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  setToCache(cacheKey, contacts);
+  return contacts;
 }
 
 export async function saveContact(contact: Contact): Promise<Contact> {
+  invalidateCache("contacts");
   return (await apiRequest<{ contact: Contact }>("/api/contacts", jsonBody(contact))).contact;
 }
 
 export async function deleteContact(_userId: string, contactId: string): Promise<void> {
+  invalidateCache("contacts");
   await apiRequest(`/api/contacts/${encodeURIComponent(contactId)}`, { method: "DELETE" });
 }
 
-export async function getCampaigns(_userId: string): Promise<Campaign[]> {
-  return (await allPages<Campaign>("/api/campaigns", "campaigns")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export async function getCampaigns(userId: string, forceRefresh = false): Promise<Campaign[]> {
+  if (!userId) return [];
+  const cacheKey = `campaigns_${userId}`;
+  if (!forceRefresh) {
+    const cached = getFromCache<Campaign[]>(cacheKey);
+    if (cached) return cached;
+  }
+  const campaigns = (await allPages<Campaign>("/api/campaigns", "campaigns")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  setToCache(cacheKey, campaigns);
+  return campaigns;
 }
 
 export async function getCampaignById(_userId: string, campaignId: string): Promise<Campaign | null> {
@@ -47,6 +100,7 @@ export async function getCampaignById(_userId: string, campaignId: string): Prom
 }
 
 export async function saveCampaign(campaign: Campaign): Promise<Campaign> {
+  invalidateCache("campaigns");
   if (campaign.status === "cancelled") {
     return (await apiRequest<{ campaign: Campaign }>(`/api/campaigns/${encodeURIComponent(campaign.id)}`, jsonBody({ status: "cancelled" }, "PATCH"))).campaign;
   }
@@ -54,6 +108,7 @@ export async function saveCampaign(campaign: Campaign): Promise<Campaign> {
 }
 
 export async function deleteCampaign(_userId: string, campaignId: string): Promise<void> {
+  invalidateCache("campaigns");
   await apiRequest(`/api/campaigns/${encodeURIComponent(campaignId)}`, { method: "DELETE" });
 }
 
@@ -65,15 +120,24 @@ export async function saveCampaignRecipients(_campaignId: string, _recipients: C
   // Campaign recipients are saved on the server-side during /api/campaigns/send
 }
 
-export async function getTemplates(_userId: string): Promise<EmailTemplate[]> {
+export async function getTemplates(userId: string, forceRefresh = false): Promise<EmailTemplate[]> {
+  const cacheKey = `templates_${userId || "all"}`;
+  if (!forceRefresh) {
+    const cached = getFromCache<EmailTemplate[]>(cacheKey);
+    if (cached) return cached;
+  }
   const { templates } = await apiRequest<{ templates: EmailTemplate[] }>("/api/templates");
-  return [...PREBUILT_TEMPLATES, ...templates];
+  const combined = [...PREBUILT_TEMPLATES, ...(templates || [])];
+  setToCache(cacheKey, combined);
+  return combined;
 }
 
 export async function saveTemplate(template: EmailTemplate): Promise<EmailTemplate> {
+  invalidateCache("templates");
   return (await apiRequest<{ template: EmailTemplate }>("/api/templates", jsonBody(template))).template;
 }
 
 export async function deleteTemplate(_userId: string, templateId: string): Promise<void> {
+  invalidateCache("templates");
   await apiRequest(`/api/templates/${encodeURIComponent(templateId)}`, { method: "DELETE" });
 }

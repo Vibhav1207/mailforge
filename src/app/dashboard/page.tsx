@@ -31,12 +31,13 @@ export default function DashboardOverviewPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (forceRefresh = false) => {
+    if (!userId) return;
     setLoading(true);
     try {
       const [cmpList, cntList] = await Promise.all([
-        getCampaigns(userId),
-        getContacts(userId),
+        getCampaigns(userId, forceRefresh),
+        getContacts(userId, forceRefresh),
       ]);
       setCampaigns(cmpList);
       setContacts(cntList);
@@ -48,6 +49,7 @@ export default function DashboardOverviewPage() {
   };
 
   useEffect(() => {
+    if (!userId) return;
     loadDashboardData();
   }, [userId]);
 
@@ -80,7 +82,7 @@ export default function DashboardOverviewPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadDashboardData}
+            onClick={() => loadDashboardData(true)}
             disabled={loading}
             className="p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
             title="Refresh statistics"

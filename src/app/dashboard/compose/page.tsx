@@ -187,6 +187,7 @@ export default function ComposeEmailPage() {
 
   // Load saved contacts and templates on mount
   useEffect(() => {
+    if (!userId) return;
     async function loadData() {
       try {
         const [cnts, tmpls] = await Promise.all([

@@ -52,34 +52,80 @@ async function resolveMongoUri(uri: string): Promise<string> {
   return uri;
 }
 
+let indexesEnsured = false;
+async function ensureMongoIndexes(db: Db): Promise<void> {
+  if (indexesEnsured) return;
+  indexesEnsured = true;
+  try {
+    await Promise.allSettled([
+      db.collection("campaigns").createIndex({ userId: 1, createdAt: -1 }),
+      db.collection("campaigns").createIndex({ userId: 1, status: 1 }),
+      db.collection("contacts").createIndex({ userId: 1, createdAt: -1 }),
+      db.collection("contacts").createIndex({ userId: 1, email: 1 }),
+      db.collection("email_templates").createIndex({ userId: 1, createdAt: -1 }),
+      db.collection("email_templates").createIndex({ userId: 1, folder: 1 }),
+      db.collection("campaignJobs").createIndex({ state: 1, nextRunAt: 1 }),
+      db.collection("campaignRecipients").createIndex({ campaignId: 1, userId: 1 }),
+      db.collection("campaignRecipients").createIndex({ campaignId: 1, status: 1, nextAttemptAt: 1 }),
+      db.collection("emailEvents").createIndex({ campaignId: 1, recipientId: 1 }),
+      db.collection("emailEvents").createIndex({ userId: 1, timestamp: -1 }),
+      db.collection("template_images").createIndex({ userId: 1, folder: 1 }),
+      db.collection("domains").createIndex({ domain: 1, status: 1 }),
+      db.collection("users").createIndex({ uid: 1 }),
+    ]);
+  } catch (err) {
+    console.warn("MongoDB index creation notice (non-fatal):", (err as Error)?.message || err);
+  }
+}
+
 export async function getMongoClient(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URL;
   if (!uri || !isMongoConfigured()) throw new ApiError(503, "Configure MONGODB_URI to store templates and images.", "CONFIGURATION_REQUIRED");
   if (!globalThis.postvaneMongo || globalThis.postvaneMongo.uri !== uri) {
     const connectPromise = (async () => {
-      let targetUri = uri;
-      try {
-        targetUri = await resolveMongoUri(uri);
-      } catch {
-        // Fall back to original URI if resolution encountered an unexpected error
-      }
-      const client = new MongoClient(targetUri, {
-        connectTimeoutMS: 5000,
-        serverSelectionTimeoutMS: 5000,
+      // Connect directly with native driver first for lowest latency (0-50ms)
+      let client = new MongoClient(uri, {
+        connectTimeoutMS: 4000,
+        serverSelectionTimeoutMS: 4000,
         maxPoolSize: 10,
+        minPoolSize: 1,
         maxIdleTimeMS: 60_000,
       });
+
       try {
         await client.connect();
-        const activeDb = process.env.MONGODB_DB_NAME ? client.db(process.env.MONGODB_DB_NAME) : client.db();
-        console.log(`\x1b[32m✔ [MongoDB] Successfully connected to database: "${activeDb.databaseName}"\x1b[0m`);
-        return client;
-      } catch (err: unknown) {
-        console.error(`\x1b[31m✖ [MongoDB] Connection failed:\x1b[0m`, (err as Error)?.message || err);
-        globalThis.postvaneMongo = undefined;
-        await client.close().catch(() => {});
-        throw new ApiError(503, `MongoDB is unavailable: ${(err as Error)?.message || "Check connection and access settings"}`, "DATABASE_UNAVAILABLE");
+      } catch (directErr: any) {
+        // Fall back to custom SRV resolver ONLY if native resolution failed (e.g. local router DNS refusal)
+        const errMsg = directErr?.message || "";
+        if (uri.startsWith("mongodb+srv://") && (/querySrv|ECONNREFUSED|ENOTFOUND/i.test(errMsg))) {
+          console.warn("Native SRV resolution failed, attempting public DNS resolver fallback...");
+          try {
+            const resolvedUri = await resolveMongoUri(uri);
+            client = new MongoClient(resolvedUri, {
+              connectTimeoutMS: 5000,
+              serverSelectionTimeoutMS: 5000,
+              maxPoolSize: 10,
+              minPoolSize: 1,
+              maxIdleTimeMS: 60_000,
+            });
+            await client.connect();
+          } catch (fallbackErr: any) {
+            globalThis.postvaneMongo = undefined;
+            await client.close().catch(() => {});
+            throw new ApiError(503, `MongoDB is unavailable: ${fallbackErr?.message || "Check connection and access settings"}`, "DATABASE_UNAVAILABLE");
+          }
+        } else {
+          globalThis.postvaneMongo = undefined;
+          await client.close().catch(() => {});
+          throw new ApiError(503, `MongoDB is unavailable: ${directErr?.message || "Check connection and access settings"}`, "DATABASE_UNAVAILABLE");
+        }
       }
+
+      const activeDb = process.env.MONGODB_DB_NAME ? client.db(process.env.MONGODB_DB_NAME) : client.db();
+      console.log(`\x1b[32m✔ [MongoDB] Successfully connected to database: "${activeDb.databaseName}"\x1b[0m`);
+      // Lazy index build in background without blocking current request
+      ensureMongoIndexes(activeDb).catch(() => {});
+      return client;
     })();
 
     globalThis.postvaneMongo = { uri, promise: connectPromise };

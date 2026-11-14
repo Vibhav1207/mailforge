@@ -41,9 +41,18 @@ export async function listOwned(collection: string, userId: string, searchParams
     if (cursor) {
       filter._id = { $gt: cursor };
     }
+    const options: Record<string, any> = {};
+    if (collection === "campaigns") {
+      options.projection = {
+        draftRecipients: 0,
+        attachments: 0,
+        htmlContent: 0,
+        textContent: 0,
+      };
+    }
     const docs = await db
       .collection(collection)
-      .find(filter)
+      .find(filter, options)
       .sort({ _id: 1 })
       .limit(limit)
       .toArray();

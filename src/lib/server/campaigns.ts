@@ -525,7 +525,7 @@ export async function processCampaign(campaignId: string, budgetMs = 45_000): Pr
         });
       }
 
-      const delay = integerSetting("BATCH_DELAY_MS", 2_000, 2_000, 10_000);
+      const delay = integerSetting("BATCH_DELAY_MS", 200, 0, 10_000);
       if (delay && Date.now() + delay < deadline) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }

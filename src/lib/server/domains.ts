@@ -320,6 +320,8 @@ export async function verifyNativeDomainDns(
   };
 }
 
+const dkimCache = new Map<string, { domain: string; selector: string; privateKey: string; expMs: number }>();
+
 /**
  * Retrieves decrypted DKIM credentials for a domain if verified.
  */
@@ -330,16 +332,24 @@ export async function getDomainDkim(domainName: string): Promise<{
 } | null> {
   try {
     const clean = normalizeDomain(domainName);
+    const now = Date.now();
+    const cached = dkimCache.get(clean);
+    if (cached && cached.expMs > now) {
+      return { domain: cached.domain, selector: cached.selector, privateKey: cached.privateKey };
+    }
+
     const db = await getMongoDb();
     const doc: any = await db.collection("domains").findOne({ domain: clean });
     if (!doc || !doc.encryptedPrivateKey) return null;
 
     const privateKey = decryptSecret(doc.encryptedPrivateKey, doc.userId);
-    return {
+    const result = {
       domain: doc.domain,
       selector: doc.selector || "pv1",
       privateKey,
     };
+    dkimCache.set(clean, { ...result, expMs: now + 10 * 60 * 1000 });
+    return result;
   } catch (err) {
     console.warn("Could not retrieve DKIM for domain:", domainName, (err as Error)?.message);
     return null;

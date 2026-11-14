@@ -95,6 +95,8 @@ export async function checkDomainDns(domain: string): Promise<DomainDnsCheckResu
   return result;
 }
 
+const verifiedDomainCache = new Map<string, { verified: boolean; expMs: number }>();
+
 /**
  * Validates that an outgoing email address belongs to a verified domain,
  * preventing arbitrary unverified sender spoofing in production.
@@ -109,20 +111,32 @@ export async function assertVerifiedSenderDomain(fromEmail: string): Promise<boo
     return true;
   }
 
+  const now = Date.now();
+  const cached = verifiedDomainCache.get(domain);
+  if (cached && cached.expMs > now) {
+    return cached.verified;
+  }
+
+  let verified = false;
   // Check Postvane native registered and verified domains
   try {
     const db = await getMongoDb();
     const verifiedDoc = await db.collection("domains").findOne({ domain, status: "verified" });
-    if (verifiedDoc) return true;
+    if (verifiedDoc) verified = true;
   } catch (err) {
     console.warn("Could not query verified domains:", (err as Error)?.message);
   }
 
   // Fallback to live DNS check (SPF must exist)
-  try {
-    const check = await checkDomainDns(domain);
-    return check.hasSpf;
-  } catch {
-    return false;
+  if (!verified) {
+    try {
+      const check = await checkDomainDns(domain);
+      verified = check.hasSpf;
+    } catch {
+      verified = false;
+    }
   }
+
+  verifiedDomainCache.set(domain, { verified, expMs: now + 5 * 60 * 1000 });
+  return verified;
 }
