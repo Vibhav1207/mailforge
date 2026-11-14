@@ -16,21 +16,17 @@ import {
   Mail,
   Menu,
   X,
-  ShieldCheck,
-  ExternalLink,
-  ChevronRight,
-  User as UserIcon,
-  Sparkles,
   Globe,
   Key,
+  Plus,
 } from "lucide-react";
 
 const NAVIGATION_ITEMS = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Compose Email", href: "/dashboard/compose", icon: Send },
-  { name: "Contacts", href: "/dashboard/contacts", icon: Users },
+  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
-  { name: "Email Templates", href: "/dashboard/templates", icon: FileCode2 },
+  { name: "Compose", href: "/dashboard/compose", icon: Send },
+  { name: "Contacts", href: "/dashboard/contacts", icon: Users },
+  { name: "Templates", href: "/dashboard/templates", icon: FileCode2 },
   { name: "Sending History", href: "/dashboard/history", icon: History },
   { name: "Domains", href: "/dashboard/domains", icon: Globe },
   { name: "API Keys", href: "/dashboard/api-keys", icon: Key },
@@ -55,141 +51,136 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push("/");
   };
 
-  const displayName = profile?.displayName || user?.displayName || "Email Operator";
+  const displayName = profile?.displayName || user?.displayName || "Operator";
   const displayEmail = profile?.email || user?.email || "";
   const photoUrl = profile?.photoURL || user?.photoURL;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] flex font-sans selection:bg-white/10 selection:text-white">
       {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar Component */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col justify-between ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 bg-[#0D0F11] border-r border-[#1C2024] transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col justify-between ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div>
-          {/* Logo & Workspace Brand */}
-          <div className="h-16 px-6 border-b border-slate-200 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm font-bold">
-                <Mail className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-slate-900 tracking-tight">Postvane</span>
-                <span className="block text-[10px] uppercase font-semibold text-slate-600 tracking-wider">
-                  Bulk Infrastructure
-                </span>
-              </div>
-            </Link>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden p-1.5 rounded-md text-slate-500 hover:bg-slate-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        <div className="flex flex-col h-full justify-between">
+          <div>
+            {/* Logo & Workspace Brand */}
+            <div className="h-16 px-5 border-b border-[#1C2024] flex items-center justify-between">
+              <Link href="/dashboard" className="flex items-center gap-2.5 group">
+                <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center text-[#08090A] shadow-sm transition-transform group-hover:scale-105">
+                  <Mail className="w-4 h-4 fill-current" />
+                </div>
+                <div>
+                  <span className="font-semibold text-sm text-[#F5F5F5] tracking-tight block">Postvane</span>
+                  <span className="text-[10px] font-mono text-[#71717A] tracking-wider uppercase block">Console</span>
+                </div>
+              </Link>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden p-1.5 rounded-md text-[#A1A1AA] hover:text-white hover:bg-[#171A1D]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-          {/* Quick Action Button */}
-          <div className="p-4">
-            <Link
-              href="/dashboard/compose"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
-            >
-              <Send className="w-4 h-4" />
-              <span>Compose Campaign</span>
-            </Link>
-          </div>
+            {/* Quick Action Button: New Campaign */}
+            <div className="px-3 pt-4 pb-2">
+              <Link
+                href="/dashboard/compose"
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-[#E5E7EB] text-[#08090A] rounded-md text-xs font-semibold shadow-sm transition-all active:scale-[0.99]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Campaign</span>
+              </Link>
+            </div>
 
-          {/* Navigation Links */}
-          <nav className="px-3 space-y-1">
-            {NAVIGATION_ITEMS.map((item) => {
-              const isActive =
-                item.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : pathname?.startsWith(item.href);
-              const Icon = item.icon;
+            {/* Navigation Links */}
+            <nav className="px-3 py-3 space-y-1">
+              {NAVIGATION_ITEMS.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                const Icon = item.icon;
 
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-blue-50 text-blue-700 font-semibold"
-                      : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                  }`}
-                >
-                  <Icon
-                    className={`w-4 h-4 shrink-0 ${
-                      isActive ? "text-blue-600" : "text-slate-600"
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                      isActive
+                        ? "bg-[#171A1D] text-white border border-[#262A2E]"
+                        : "text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-[#111315]"
                     }`}
-                  />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#71717A]"}`} />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
 
-        {/* User Profile & Footer Area */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/50">
-          <div className="flex items-center gap-3 mb-3">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={displayName}
-                className="w-9 h-9 rounded-full border border-slate-300 object-cover"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 font-semibold text-xs">
-                {displayName.charAt(0).toUpperCase()}
+          {/* User Profile & Sign Out Footer */}
+          <div className="p-3 border-t border-[#1C2024] bg-[#0D0F11]">
+            <div className="flex items-center justify-between p-2 rounded-md bg-[#111315] border border-[#1C2024]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt={displayName}
+                    className="w-7 h-7 rounded-full border border-[#262A2E] object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-[#171A1D] border border-[#262A2E] flex items-center justify-center text-xs font-semibold text-white shrink-0">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[#F5F5F5] truncate">{displayName}</p>
+                  <p className="text-[10px] text-[#71717A] truncate font-mono">{displayEmail}</p>
+                </div>
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-900 truncate">{displayName}</p>
-              <p className="text-[11px] text-slate-600 truncate">{displayEmail}</p>
+
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 text-[#71717A] hover:text-[#EF4444] rounded hover:bg-[#171A1D] transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-slate-700 hover:text-red-700 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Mobile Header Bar */}
-        <header className="h-16 lg:hidden border-b border-slate-200 bg-white px-4 flex items-center justify-between">
+        <header className="h-14 px-4 bg-[#0D0F11] border-b border-[#1C2024] flex items-center justify-between lg:hidden sticky top-0 z-30">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-white flex items-center justify-center text-[#08090A]">
+              <Mail className="w-3.5 h-3.5 fill-current" />
+            </div>
+            <span className="font-semibold text-sm text-[#F5F5F5]">Postvane</span>
+          </Link>
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+            className="p-2 rounded-md text-[#A1A1AA] hover:text-white hover:bg-[#171A1D]"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2 font-bold text-slate-900">
-            <Mail className="w-4 h-4 text-blue-600" />
-            <span>Postvane</span>
-          </div>
-          <div className="w-8" />
         </header>
 
-        {/* Content Container */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        {/* Page Container */}
+        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>

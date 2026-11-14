@@ -9,10 +9,7 @@ import {
   Copy,
   Check,
   RefreshCw,
-  AlertTriangle,
   Code2,
-  Terminal,
-  ShieldCheck,
   Clock,
   Sparkles,
 } from "lucide-react";
@@ -116,63 +113,63 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16">
+    <div className="space-y-6 pb-16">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#262A2E] pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl font-medium tracking-tight text-white">
               Developer API Keys
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              REST Email API
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#171A1D] text-zinc-300 border border-[#262A2E]">
+              REST EMAIL API
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Programmatically dispatch transactional emails via our native REST API (<code className="font-mono text-indigo-600 font-medium">/api/v1/emails</code>) just like Resend.
+          <p className="text-xs text-zinc-400 font-mono mt-1">
+            Programmatically dispatch transactional emails via our native REST endpoint (<code className="text-zinc-200">/api/v1/emails</code>).
           </p>
         </div>
 
         <button
           onClick={() => setCreating(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          className="inline-flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white rounded-lg hover:bg-zinc-200 transition-colors shadow-sm"
         >
-          <Plus className="w-4 h-4" />
-          Create API Key
+          <Plus className="w-3.5 h-3.5" />
+          <span>Create API Key</span>
         </button>
       </div>
 
       {/* Secret Key Revealed Banner (One-Time Display) */}
       {newlyCreatedKey && (
-        <div className="bg-emerald-50 border-2 border-emerald-500/30 rounded-xl p-6 shadow-sm space-y-3">
+        <div className="bg-[#111315] border border-emerald-500/30 rounded-xl p-5 space-y-3 font-mono">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-900 font-semibold text-sm">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-              API Key Created Successfully
+            <div className="flex items-center gap-2 text-emerald-400 font-medium text-xs">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              API Key Generated Successfully
             </div>
             <button
               onClick={() => setNewlyCreatedKey(null)}
-              className="text-xs text-emerald-700 hover:text-emerald-900 font-medium"
+              className="text-xs text-zinc-400 hover:text-white"
             >
-              Done & Close
+              Done & Dismiss
             </button>
           </div>
 
-          <p className="text-xs text-emerald-800">
-            Please copy this API key immediately. For your security, it will <strong>never be shown again</strong>.
+          <p className="text-xs text-zinc-400">
+            Copy this secret key now. For your security, it will <strong>never be shown again</strong>.
           </p>
 
-          <div className="flex items-center gap-2 bg-white border border-emerald-200 p-2.5 rounded-lg">
-            <code className="text-xs font-mono font-bold text-slate-900 flex-1 select-all break-all">
+          <div className="flex items-center gap-2 bg-[#171A1D] border border-[#262A2E] p-2.5 rounded-lg">
+            <code className="text-xs text-white flex-1 select-all break-all">
               {newlyCreatedKey}
             </code>
             <button
               onClick={() => copyToClipboard(newlyCreatedKey, "created-key")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shrink-0 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-md shrink-0 transition-colors"
             >
               {copiedKey === "created-key" ? (
                 <>
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-3.5 h-3.5 text-black" />
                   Copied
                 </>
               ) : (
@@ -186,17 +183,17 @@ export default function ApiKeysPage() {
         </div>
       )}
 
-      {/* Create Key Modal */}
+      {/* Create Key Drawer */}
       {creating && (
-        <div className="bg-white border-2 border-indigo-500/20 rounded-xl p-6 shadow-md">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-[#111315] border border-[#262A2E] rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Create New API Key</h2>
+              <Key className="w-4 h-4 text-zinc-400" />
+              <h2 className="text-sm font-medium text-white">Create New API Key</h2>
             </div>
             <button
               onClick={() => setCreating(false)}
-              className="text-slate-400 hover:text-slate-600 text-sm font-medium"
+              className="text-zinc-500 hover:text-white text-xs font-mono"
             >
               Cancel
             </button>
@@ -204,32 +201,32 @@ export default function ApiKeysPage() {
 
           <form onSubmit={handleCreateKey} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                Key Name
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                Key Identifier
               </label>
               <input
                 type="text"
-                placeholder="e.g. Production Backend, Next.js Server, Zapier"
+                placeholder="e.g. Production Backend, Next.js Server"
                 value={keyName}
                 onChange={(e) => setKeyName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs text-white font-mono focus:border-zinc-500 focus:outline-none"
                 disabled={submitting}
                 autoFocus
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setCreating(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="px-3.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || !keyName.trim()}
-                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg disabled:opacity-50 transition-colors"
               >
                 {submitting ? "Generating..." : "Generate Key"}
               </button>
@@ -239,75 +236,75 @@ export default function ApiKeysPage() {
       )}
 
       {/* Keys List */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200">
-          <h3 className="text-base font-bold text-slate-900">Active API Keys</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Keys are securely hashed with SHA-256 in MongoDB. Only you have access to the raw key secret.
+      <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">
+        <div className="p-4 border-b border-[#262A2E]">
+          <h3 className="text-sm font-medium text-white">Active API Keys</h3>
+          <p className="text-xs text-zinc-400 font-mono mt-0.5">
+            Keys are securely hashed with SHA-256. Raw secrets are only revealed upon creation.
           </p>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-slate-500 text-sm flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
-            Loading API keys...
+          <div className="p-8 text-center text-zinc-500 font-mono text-xs flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-white" />
+            LOADING API KEYS...
           </div>
         ) : keys.length === 0 ? (
           <div className="p-10 text-center">
-            <Key className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm font-medium text-slate-700">No developer API keys yet</p>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Create an API key to dispatch transactional emails from your server or backend application.
+            <Key className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-white">No active API keys</p>
+            <p className="text-xs text-zinc-500 font-mono max-w-sm mx-auto mt-1 mb-4">
+              Create an API key to dispatch transactional emails from your server application.
             </p>
             <button
               onClick={() => setCreating(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white rounded-lg hover:bg-zinc-200 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              Create Key
+              <span>Create Key</span>
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-200">
+          <div className="divide-y divide-[#1C2024]">
             {keys.map((k) => (
               <div
                 key={k.id}
-                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors"
+                className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#171A1D]/40 transition-colors font-mono"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                    <Key className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-[#171A1D] border border-[#262A2E] flex items-center justify-center text-zinc-400 shrink-0">
+                    <Key className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900">{k.name}</h4>
-                    <p className="text-xs font-mono text-slate-500 mt-0.5">
-                      {k.keyPrefix}
+                    <h4 className="text-xs font-medium text-white font-sans">{k.name}</h4>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      {k.keyPrefix}••••••••••••
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 text-xs text-slate-500">
+                <div className="flex items-center gap-6 text-[11px] text-zinc-400">
                   <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
                     <span>Created: {new Date(k.createdAt).toLocaleDateString()}</span>
                   </div>
 
                   <div>
                     {k.lastUsedAt ? (
-                      <span className="text-emerald-700 font-medium">
+                      <span className="text-emerald-400">
                         Last used: {new Date(k.lastUsedAt).toLocaleDateString()}
                       </span>
                     ) : (
-                      <span className="text-slate-400 italic">Never used</span>
+                      <span className="text-zinc-600 italic">Never used</span>
                     )}
                   </div>
 
                   <button
                     onClick={() => handleRevokeKey(k)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-[#171A1D] rounded-lg transition-colors"
                     title="Revoke API key"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -316,46 +313,46 @@ export default function ApiKeysPage() {
         )}
       </div>
 
-      {/* Interactive Code Snippets / Quickstart */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+      {/* Code Snippets / Quickstart */}
+      <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">
+        <div className="p-4 border-b border-[#262A2E] flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#171A1D]/40">
           <div>
             <div className="flex items-center gap-2">
-              <Code2 className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-base font-bold text-slate-900">Developer Integration Quickstart</h3>
+              <Code2 className="w-4 h-4 text-zinc-400" />
+              <h3 className="text-sm font-medium text-white">Developer Integration Quickstart</h3>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Send your first email with Postvane using your preferred language or HTTP tool.
+            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+              Send an email via HTTP REST dispatch.
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-lg">
+          <div className="flex items-center gap-1 bg-[#111315] border border-[#262A2E] p-0.5 rounded-lg font-mono">
             <button
               onClick={() => setActiveTab("curl")}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3 py-1 rounded text-xs transition-colors ${
                 activeTab === "curl"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#171A1D] text-white font-medium"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               cURL
             </button>
             <button
               onClick={() => setActiveTab("ts")}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3 py-1 rounded text-xs transition-colors ${
                 activeTab === "ts"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#171A1D] text-white font-medium"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              TypeScript / JS
+              TypeScript
             </button>
             <button
               onClick={() => setActiveTab("python")}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              className={`px-3 py-1 rounded text-xs transition-colors ${
                 activeTab === "python"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#171A1D] text-white font-medium"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               Python
@@ -363,18 +360,18 @@ export default function ApiKeysPage() {
           </div>
         </div>
 
-        <div className="p-5 bg-slate-950 font-mono text-xs text-slate-200 overflow-x-auto relative">
+        <div className="p-5 bg-[#08090A] font-mono text-xs text-zinc-300 overflow-x-auto relative">
           <button
             onClick={() => {
               const snippet =
                 activeTab === "curl"
-                  ? `curl -X POST https://your-postvane-app.com/api/v1/emails \\\n  -H "Authorization: Bearer pv_live_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "from": "Acme <hello@yourdomain.com>",\n    "to": "customer@example.com",\n    "subject": "Order Confirmation",\n    "html": "<strong>Thank you for your order!</strong>"\n  }'`
+                  ? `curl -X POST https://postvane.netlify.app/api/v1/emails \\\n  -H "Authorization: Bearer pv_live_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "from": "Acme <hello@yourdomain.com>",\n    "to": "customer@example.com",\n    "subject": "Order Confirmation",\n    "html": "<strong>Thank you for your order!</strong>"\n  }'`
                   : activeTab === "ts"
-                  ? `const response = await fetch("https://your-postvane-app.com/api/v1/emails", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer pv_live_YOUR_API_KEY",\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    from: "Acme <hello@yourdomain.com>",\n    to: "customer@example.com",\n    subject: "Order Confirmation",\n    html: "<strong>Thank you for your order!</strong>",\n  }),\n});\n\nconst data = await response.json();\nconsole.log("Email dispatched:", data.id);`
-                  : `import requests\n\nresponse = requests.post(\n    "https://your-postvane-app.com/api/v1/emails",\n    headers={\n        "Authorization": "Bearer pv_live_YOUR_API_KEY",\n        "Content-Type": "application/json",\n    },\n    json={\n        "from": "Acme <hello@yourdomain.com>",\n        "to": "customer@example.com",\n        "subject": "Order Confirmation",\n        "html": "<strong>Thank you for your order!</strong>",\n    }\n)\n\nprint(response.json())`;
+                  ? `const response = await fetch("https://postvane.netlify.app/api/v1/emails", {\n  method: "POST",\n  headers: {\n    "Authorization": "Bearer pv_live_YOUR_API_KEY",\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    from: "Acme <hello@yourdomain.com>",\n    to: "customer@example.com",\n    subject: "Order Confirmation",\n    html: "<strong>Thank you for your order!</strong>",\n  }),\n});\n\nconst data = await response.json();\nconsole.log("Email dispatched:", data.id);`
+                  : `import requests\n\nresponse = requests.post(\n    "https://postvane.netlify.app/api/v1/emails",\n    headers={\n        "Authorization": "Bearer pv_live_YOUR_API_KEY",\n        "Content-Type": "application/json",\n    },\n    json={\n        "from": "Acme <hello@yourdomain.com>",\n        "to": "customer@example.com",\n        "subject": "Order Confirmation",\n        "html": "<strong>Thank you for your order!</strong>",\n    }\n)\n\nprint(response.json())`;
               copyToClipboard(snippet, "snippet");
             }}
-            className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-sans font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded transition-colors"
+            className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono text-zinc-300 bg-[#171A1D] border border-[#262A2E] hover:border-zinc-500 rounded transition-colors"
           >
             {copiedKey === "snippet" ? (
               <>
@@ -384,14 +381,14 @@ export default function ApiKeysPage() {
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                Copy Snippet
+                Copy
               </>
             )}
           </button>
 
           {activeTab === "curl" && (
-            <pre className="text-slate-300 leading-relaxed">
-              {`curl -X POST https://your-postvane-app.com/api/v1/emails \\
+            <pre className="text-zinc-300 leading-relaxed">
+              {`curl -X POST https://postvane.netlify.app/api/v1/emails \\
   -H "Authorization: Bearer pv_live_YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -404,8 +401,8 @@ export default function ApiKeysPage() {
           )}
 
           {activeTab === "ts" && (
-            <pre className="text-emerald-300 leading-relaxed">
-              {`const response = await fetch("https://your-postvane-app.com/api/v1/emails", {
+            <pre className="text-zinc-300 leading-relaxed">
+              {`const response = await fetch("https://postvane.netlify.app/api/v1/emails", {
   method: "POST",
   headers: {
     "Authorization": "Bearer pv_live_YOUR_API_KEY",
@@ -425,11 +422,11 @@ console.log("Email dispatched:", data.id);`}
           )}
 
           {activeTab === "python" && (
-            <pre className="text-sky-300 leading-relaxed">
+            <pre className="text-zinc-300 leading-relaxed">
               {`import requests
 
 response = requests.post(
-    "https://your-postvane-app.com/api/v1/emails",
+    "https://postvane.netlify.app/api/v1/emails",
     headers={
         "Authorization": "Bearer pv_live_YOUR_API_KEY",
         "Content-Type": "application/json",

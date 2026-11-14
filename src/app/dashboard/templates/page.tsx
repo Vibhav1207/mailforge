@@ -11,7 +11,6 @@ import {
 } from "@/lib/store/db-service";
 import { apiFetch } from "@/lib/api-client";
 import { EmailTemplate, TemplateImage, EmailAttachment } from "@/types";
-import { PREBUILT_TEMPLATES } from "@/lib/email/templates";
 import { formatDate } from "@/lib/utils";
 import {
   FileCode2,
@@ -99,7 +98,7 @@ export default function TemplatesPage() {
         setMongoImages(data.images || []);
       }
     } catch (err) {
-      console.error("Failed to load MongoDB template images:", err);
+      console.error("Failed to load MongoDB images:", err);
     } finally {
       setLoadingImages(false);
     }
@@ -110,7 +109,6 @@ export default function TemplatesPage() {
     loadData();
   }, [userId]);
 
-  // Open Create Modal
   const handleOpenCreate = () => {
     setEditingTemplate(null);
     setModalName("");
@@ -118,22 +116,37 @@ export default function TemplatesPage() {
     setModalCategory("custom");
     setModalFolder("general");
     setModalImageUrl("");
+    setModalDescription("");
     setModalAttachments([]);
     setModalAttachmentError(null);
-    setModalDescription("");
     setModalHtml(`<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: sans-serif; color: #1e293b; padding: 24px; max-width: 600px; margin: 0 auto;">
-  <h2>Hello {{firstName}},</h2>
-  <p>Your custom email content goes here.</p>
-  <p>Best regards,<br>{{fromName}}</p>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #111827; margin: 0; padding: 24px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 8px; border: 1px solid #e5e7eb; }
+    h1 { font-size: 20px; font-weight: 600; color: #111827; margin-top: 0; }
+    p { margin: 16px 0; font-size: 14px; }
+    .btn { display: inline-block; padding: 10px 20px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 13px; }
+    .footer { font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hello {{firstName}},</h1>
+    <p>Write your message here. You can use dynamic variables like {{company}} or {{firstName}}.</p>
+    <p><a href="https://example.com" class="btn">Take Action</a></p>
+    <div class="footer">
+      <p>Sent by {{fromName}}. <a href="{{unsubscribeUrl}}">Unsubscribe</a></p>
+    </div>
+  </div>
 </body>
 </html>`);
+    setUploadError(null);
     setEditModalOpen(true);
   };
 
-  // Open Edit Modal
   const handleOpenEdit = (t: EmailTemplate) => {
     setEditingTemplate(t);
     setModalName(t.name);
@@ -141,56 +154,70 @@ export default function TemplatesPage() {
     setModalCategory(t.category);
     setModalFolder(t.folder || "general");
     setModalImageUrl(t.imageUrl || "");
-    setModalAttachments(t.attachments || []);
-    setModalAttachmentError(null);
     setModalDescription(t.description || "");
     setModalHtml(t.htmlContent);
+    setModalAttachments(t.attachments || []);
+    setModalAttachmentError(null);
+    setUploadError(null);
     setEditModalOpen(true);
   };
 
   const handleModalAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setModalAttachmentError(null);
 
-    if (modalAttachments.length + files.length > 5) {
-      setModalAttachmentError("You can attach up to 5 files per template.");
-      e.target.value = "";
+    const maxFileSize = 4 * 1024 * 1024;
+    const maxAttachments = 5;
+
+    if (modalAttachments.length + files.length > maxAttachments) {
+      setModalAttachmentError(`Maximum ${maxAttachments} attachments allowed per template.`);
       return;
     }
 
-    for (const file of files) {
-      if (file.size > 4 * 1024 * 1024) {
-        setModalAttachmentError(`File "${file.name}" is too large (max 4 MB per attachment).`);
-        e.target.value = "";
+    const newAttachments: EmailAttachment[] = [];
+    let filesProcessed = 0;
+    const filesToProcess = Array.from(files);
+
+    filesToProcess.forEach((file) => {
+      if (file.size > maxFileSize) {
+        setModalAttachmentError(`File "${file.name}" exceeds the 4MB limit.`);
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.includes(",") ? result.split(",")[1] : result;
-        setModalAttachments((prev) => [
-          ...prev,
-          {
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          const base64Data = result.split(",")[1];
+          newAttachments.push({
             id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             filename: file.name,
             contentType: file.type || "application/octet-stream",
+            contentBase64: base64Data,
             size: file.size,
-            contentBase64: base64,
-          },
-        ]);
+          });
+        }
+        filesProcessed++;
+        if (filesProcessed === filesToProcess.length) {
+          setModalAttachments((prev) => [...prev, ...newAttachments]);
+        }
+      };
+      reader.onerror = () => {
+        setModalAttachmentError(`Failed to read file "${file.name}".`);
       };
       reader.readAsDataURL(file);
-    }
+    });
+
     e.target.value = "";
   };
 
   const removeModalAttachment = (idOrIndex: string | number) => {
-    setModalAttachments((prev) => prev.filter((a, idx) => a.id !== idOrIndex && idx !== idOrIndex));
+    setModalAttachments((prev) =>
+      prev.filter((item, idx) => (typeof idOrIndex === "string" ? item.id !== idOrIndex : idx !== idOrIndex))
+    );
   };
 
-  // Upload image to MongoDB folder
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -201,11 +228,11 @@ export default function TemplatesPage() {
     try {
       if (!file.type.startsWith("image/")) {
         throw new Error(
-          "Please choose an image file (PNG, JPG, WebP, GIF) for the template header. To attach PDF documents to an email, use the Attachments section in Compose."
+          "Please choose an image file (PNG, JPG, WebP, GIF) for the template header. To attach PDF documents, use Attachments."
         );
       }
       if (file.size > 5 * 1024 * 1024) {
-        throw new Error("Image file is too large (maximum 5MB). Please upload a smaller image.");
+        throw new Error("Image file is too large (maximum 5MB).");
       }
 
       const formData = new FormData();
@@ -238,7 +265,6 @@ export default function TemplatesPage() {
     }
   };
 
-  // Insert image tag directly into HTML template
   const handleInsertImageIntoHtml = () => {
     if (!modalImageUrl) return;
     const imgTag = `\n<img src="${modalImageUrl}" alt="Template Banner" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0 20px 0; display: block;" />\n`;
@@ -251,7 +277,6 @@ export default function TemplatesPage() {
     }
   };
 
-  // Save Template
   const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     const toSave: EmailTemplate = {
@@ -268,10 +293,8 @@ export default function TemplatesPage() {
       createdAt: editingTemplate?.createdAt || new Date().toISOString(),
     };
 
-    // Save locally/firebase
     await saveTemplate(toSave);
 
-    // Sync to MongoDB
     try {
       await apiFetch("/api/templates", {
         method: "POST",
@@ -286,7 +309,6 @@ export default function TemplatesPage() {
     await loadData();
   };
 
-  // Duplicate Template
   const handleDuplicate = async (t: EmailTemplate) => {
     const duplicated: EmailTemplate = {
       ...t,
@@ -299,14 +321,12 @@ export default function TemplatesPage() {
     await loadData();
   };
 
-  // Delete Template
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this template?")) return;
     await deleteTemplate(userId, id);
     await loadData();
   };
 
-  // Upload image in Library modal
   const handleLibraryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -348,7 +368,6 @@ export default function TemplatesPage() {
     }
   };
 
-  // Delete image from MongoDB
   const handleDeleteImage = async (imageId: string) => {
     if (!confirm("Delete this image from MongoDB?")) return;
     try {
@@ -363,7 +382,6 @@ export default function TemplatesPage() {
     }
   };
 
-  // Extract unique folders
   const allFolders = Array.from(
     new Set(templates.map((t) => t.folder || "general"))
   ).filter(Boolean);
@@ -379,9 +397,9 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Email Templates & Assets</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Build responsive email templates with optional banner images stored in MongoDB folders.
+          <h1 className="text-xl font-medium tracking-tight text-white">Email Templates & Assets</h1>
+          <p className="text-xs text-zinc-400 font-mono mt-1">
+            Modular HTML layouts, variable tokens, and MongoDB media asset folders.
           </p>
         </div>
 
@@ -391,26 +409,26 @@ export default function TemplatesPage() {
               setImageLibraryOpen(true);
               loadMongoImages("all");
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-xs transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors"
           >
-            <Database className="w-3.5 h-3.5 text-emerald-600" />
-            <span>MongoDB Image Folder</span>
+            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            <span>MongoDB Assets</span>
           </button>
 
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>New Custom Template</span>
           </button>
         </div>
       </div>
 
       {/* Filter Bar: Categories & Folders */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#111315] p-3 rounded-xl border border-[#262A2E]">
         {/* Category Filter Pills */}
-        <div className="flex flex-wrap gap-1.5 text-xs">
+        <div className="flex flex-wrap gap-1.5 text-xs font-mono">
           {[
             { id: "all", label: "All Templates" },
             { id: "outreach", label: "Cold Outreach" },
@@ -423,10 +441,10 @@ export default function TemplatesPage() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs transition-colors ${
                 selectedCategory === cat.id
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  ? "bg-white text-black font-medium"
+                  : "bg-[#171A1D] text-zinc-400 hover:text-zinc-200 border border-[#262A2E]"
               }`}
             >
               {cat.label}
@@ -436,12 +454,12 @@ export default function TemplatesPage() {
 
         {/* Folder Selector Dropdown */}
         {allFolders.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <Folder className="w-3.5 h-3.5 text-slate-500" />
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <Folder className="w-3.5 h-3.5 text-zinc-500" />
             <select
               value={selectedFolder}
               onChange={(e) => setSelectedFolder(e.target.value)}
-              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white font-medium text-slate-700 focus:ring-1 focus:ring-blue-500"
+              className="px-2.5 py-1 text-xs bg-[#171A1D] border border-[#262A2E] text-zinc-300 rounded-lg focus:outline-none"
             >
               <option value="all">All Folders</option>
               {allFolders.map((f) => (
@@ -455,135 +473,145 @@ export default function TemplatesPage() {
       </div>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((t) => (
-          <div
-            key={t.id}
-            className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all overflow-hidden group"
-          >
-            {/* Optional Header Banner Image Stored in MongoDB */}
-            {t.imageUrl && (
-              <div className="w-full h-36 bg-slate-100 relative overflow-hidden border-b border-slate-200">
-                <img
-                  src={t.imageUrl}
-                  alt={t.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-mono">
-                  <Database className="w-2.5 h-2.5 text-emerald-400" />
-                  <span>MongoDB Asset</span>
+      {loading ? (
+        <div className="p-12 text-center text-xs font-mono text-zinc-500">
+          LOADING TEMPLATE REPOSITORY...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="p-12 text-center bg-[#111315] border border-[#262A2E] rounded-xl space-y-3">
+          <FileCode2 className="w-10 h-10 text-zinc-600 mx-auto" />
+          <h3 className="text-sm font-medium text-white">No templates found</h3>
+          <p className="text-xs text-zinc-500 font-mono max-w-sm mx-auto">
+            Click "New Custom Template" to craft your first branded email template.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((t) => (
+            <div
+              key={t.id}
+              className="bg-[#111315] rounded-xl border border-[#262A2E] flex flex-col justify-between hover:border-zinc-500 transition-all overflow-hidden group"
+            >
+              {/* Optional Header Banner Image Stored in MongoDB */}
+              {t.imageUrl && (
+                <div className="w-full h-36 bg-[#171A1D] relative overflow-hidden border-b border-[#262A2E]">
+                  <img
+                    src={t.imageUrl}
+                    alt={t.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 backdrop-blur-xs text-zinc-200 text-[10px] px-2 py-0.5 rounded border border-[#262A2E] font-mono">
+                    <Database className="w-2.5 h-2.5 text-emerald-400" />
+                    <span>MongoDB Asset</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                      {t.category}
+              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#171A1D] text-zinc-300 border border-[#262A2E]">
+                        {t.category}
+                      </span>
+                      {t.folder && (
+                        <span className="text-[10px] font-mono text-zinc-400 bg-[#171A1D] px-2 py-0.5 rounded border border-[#262A2E] flex items-center gap-1">
+                          <Folder className="w-2.5 h-2.5 text-zinc-500" />
+                          {t.folder}
+                        </span>
+                      )}
+                      {t.attachments && t.attachments.length > 0 && (
+                        <span className="text-[10px] font-mono text-zinc-300 bg-[#171A1D] px-2 py-0.5 rounded border border-[#262A2E] flex items-center gap-1">
+                          <Paperclip className="w-2.5 h-2.5 text-zinc-400" />
+                          <span>{t.attachments.length}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-medium text-white group-hover:text-zinc-200 transition-colors">
+                    {t.name}
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                    {t.description || "Reusable responsive email template."}
+                  </p>
+
+                  <div className="mt-3 p-2.5 bg-[#171A1D] rounded-lg border border-[#262A2E] font-mono">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Subject:</span>
+                    <span className="text-xs text-zinc-200 line-clamp-1 mt-0.5">
+                      {t.subject}
                     </span>
-                    {t.folder && (
-                      <span className="text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 flex items-center gap-1">
-                        <Folder className="w-2.5 h-2.5 text-slate-500" />
-                        {t.folder}
-                      </span>
-                    )}
-                    {t.attachments && t.attachments.length > 0 && (
-                      <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 flex items-center gap-1">
-                        <Paperclip className="w-2.5 h-2.5 text-rose-500" />
-                        <span>{t.attachments.length} File{t.attachments.length > 1 ? "s" : ""}</span>
-                      </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-3 border-t border-[#1C2024] flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPreviewTemplate(t)}
+                      title="Preview Template"
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-[#171A1D] rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDuplicate(t)}
+                      title="Duplicate Template"
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-[#171A1D] rounded-lg transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenEdit(t)}
+                      title="Edit Template"
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-[#171A1D] rounded-lg transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+
+                    {t.userId && (
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        title="Delete Template"
+                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-[#171A1D] rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
 
-                  {!t.userId && (
-                    <span className="text-[10px] text-slate-400 font-medium">Pre-Built</span>
-                  )}
-                </div>
-
-                <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {t.name}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                  {t.description || "Reusable responsive email template."}
-                </p>
-
-                <div className="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-[11px] text-slate-500 font-medium block">Default Subject:</span>
-                  <span className="text-xs font-semibold text-slate-800 line-clamp-1">
-                    {t.subject}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setPreviewTemplate(t)}
-                    title="Preview Template"
-                    className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                    onClick={() => router.push(`/dashboard/compose?templateId=${t.id}`)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-white bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] hover:border-zinc-500 rounded-lg transition-colors"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Send className="w-3 h-3" />
+                    <span>Use in Campaign</span>
                   </button>
-
-                  <button
-                    onClick={() => handleDuplicate(t)}
-                    title="Duplicate Template"
-                    className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => handleOpenEdit(t)}
-                    title={t.userId ? "Edit Template" : "Customize & Edit Template"}
-                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-
-                  {t.userId && (
-                    <button
-                      onClick={() => handleDelete(t.id)}
-                      title="Delete Template"
-                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
-
-                <button
-                  onClick={() => router.push(`/dashboard/compose?templateId=${t.id}`)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <Send className="w-3 h-3" />
-                  <span>Use in Campaign</span>
-                </button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* EDIT / CREATE TEMPLATE MODAL */}
       {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
               <div>
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-sm font-medium text-white">
                   {editingTemplate ? "Edit Email Template" : "Create New Custom Template"}
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Define your template code, folder organization, and optional MongoDB image banner.
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                  Configure HTML body, folder category, and MongoDB banner.
                 </p>
               </div>
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-zinc-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -592,7 +620,7 @@ export default function TemplatesPage() {
             <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Template Name
                   </label>
                   <input
@@ -600,18 +628,18 @@ export default function TemplatesPage() {
                     required
                     value={modalName}
                     onChange={(e) => setModalName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                     placeholder="e.g. Q4 Customer Outreach"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Category
                   </label>
                   <select
                     value={modalCategory}
                     onChange={(e) => setModalCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:outline-none"
                   >
                     <option value="custom">Custom</option>
                     <option value="outreach">Cold Outreach</option>
@@ -623,40 +651,37 @@ export default function TemplatesPage() {
               </div>
 
               {/* Folder & Optional MongoDB Image Section */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <div className="p-4 bg-[#171A1D] rounded-xl border border-[#262A2E] space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                      <Folder className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Template Folder (Optional)</span>
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center gap-1">
+                      <Folder className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Template Folder</span>
                     </label>
                     <input
                       type="text"
                       value={modalFolder}
                       onChange={(e) => setModalFolder(e.target.value)}
-                      placeholder="e.g. newsletters, promotions, banners"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                      placeholder="newsletters, promotions, banners"
+                      className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg font-mono focus:border-zinc-500 focus:outline-none"
                     />
-                    <p className="text-[10.5px] text-slate-500 mt-1">
-                      Group templates into folders in MongoDB.
-                    </p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1 flex items-center justify-between">
                       <span className="flex items-center gap-1">
-                        <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Header Image / Banner (Optional)</span>
+                        <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Header Banner (Optional)</span>
                       </span>
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      <span className="text-[10px] font-mono text-emerald-400">
                         MongoDB Stored
                       </span>
                     </label>
 
                     <div className="flex items-center gap-2">
-                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-2xs">
-                        <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                        <span>{uploadingImage ? "Uploading..." : "Upload to MongoDB"}</span>
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>{uploadingImage ? "Uploading..." : "Upload"}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -670,31 +695,31 @@ export default function TemplatesPage() {
                         type="text"
                         value={modalImageUrl}
                         onChange={(e) => setModalImageUrl(e.target.value)}
-                        placeholder="Or enter image URL"
-                        className="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-lg bg-white font-mono"
+                        placeholder="Image URL"
+                        className="flex-1 px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
                       />
                     </div>
 
                     {uploadError && (
-                      <p className="text-[11px] text-rose-600 mt-1">{uploadError}</p>
+                      <p className="text-[11px] font-mono text-red-400 mt-1">{uploadError}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Image Preview & HTML Insertion Helper */}
                 {modalImageUrl && (
-                  <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg">
+                  <div className="flex items-center justify-between p-2.5 bg-[#111315] border border-[#262A2E] rounded-lg">
                     <div className="flex items-center gap-3">
                       <img
                         src={modalImageUrl}
                         alt="Preview"
-                        className="w-14 h-10 object-cover rounded border border-slate-200"
+                        className="w-14 h-10 object-cover rounded border border-[#262A2E]"
                       />
                       <div>
-                        <span className="text-[11px] font-semibold text-slate-800 block">
+                        <span className="text-[11px] font-medium text-white block">
                           Image active for template
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono truncate max-w-xs block">
+                        <span className="text-[10px] text-zinc-500 font-mono truncate max-w-xs block">
                           {modalImageUrl}
                         </span>
                       </div>
@@ -704,16 +729,16 @@ export default function TemplatesPage() {
                       <button
                         type="button"
                         onClick={handleInsertImageIntoHtml}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono text-zinc-300 bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] rounded transition-colors"
                       >
                         <Code2 className="w-3 h-3" />
-                        <span>Insert into HTML Code</span>
+                        <span>Insert HTML Tag</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setModalImageUrl("")}
-                        className="text-slate-400 hover:text-rose-600 p-1"
+                        className="text-zinc-500 hover:text-red-400 p-1"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -722,20 +747,20 @@ export default function TemplatesPage() {
                 )}
 
                 {/* Template Attachments (PDF & Documents) */}
-                <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="pt-2 border-t border-[#262A2E] space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                      <Paperclip className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Template Attachments (PDF, Documents)</span>
+                    <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Default Attachments (PDF, Documents)</span>
                       {modalAttachments.length > 0 && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-medium">
+                        <span className="text-[10px] bg-[#111315] text-zinc-300 px-1.5 py-0.5 rounded font-mono border border-[#262A2E]">
                           {modalAttachments.length}/5
                         </span>
                       )}
                     </label>
-                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs text-slate-700">
-                      <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Attach PDF / File</span>
+                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
+                      <UploadCloud className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Attach File</span>
                       <input
                         type="file"
                         multiple
@@ -747,7 +772,7 @@ export default function TemplatesPage() {
                   </div>
 
                   {modalAttachmentError && (
-                    <div className="flex items-center gap-1.5 text-rose-600 text-xs bg-rose-50 p-2 rounded-lg border border-rose-200">
+                    <div className="flex items-center gap-1.5 text-red-400 text-xs bg-red-950/40 p-2 rounded-lg border border-red-500/30 font-mono">
                       <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{modalAttachmentError}</span>
                     </div>
@@ -763,17 +788,17 @@ export default function TemplatesPage() {
                         return (
                           <div
                             key={file.id || fileIdx}
-                            className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+                            className="flex items-center justify-between p-2 rounded-lg border border-[#262A2E] bg-[#111315]"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={`p-1.5 rounded ${isPdf ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
-                                <FileText className="w-4 h-4" />
+                              <div className="p-1 rounded bg-[#171A1D] text-zinc-400">
+                                <FileText className="w-3.5 h-3.5" />
                               </div>
                               <div className="truncate">
-                                <span className="text-xs font-medium text-slate-800 block truncate">
+                                <span className="text-xs font-medium text-white block truncate">
                                   {file.filename}
                                 </span>
-                                <span className="text-[10.5px] text-slate-400 font-mono">
+                                <span className="text-[10px] text-zinc-500 font-mono">
                                   {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
                                 </span>
                               </div>
@@ -781,7 +806,7 @@ export default function TemplatesPage() {
                             <button
                               type="button"
                               onClick={() => removeModalAttachment(file.id || fileIdx)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
                               title="Remove attachment"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -790,18 +815,12 @@ export default function TemplatesPage() {
                         );
                       })}
                     </div>
-                  ) : (
-                    <div className="text-center py-2.5 px-3 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                      <p className="text-[11px] text-slate-500">
-                        Optional: attach default PDF brochures or documents to this template.
-                      </p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Default Subject Line
                 </label>
                 <input
@@ -809,31 +828,31 @@ export default function TemplatesPage() {
                   required
                   value={modalSubject}
                   onChange={(e) => setModalSubject(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
-                  placeholder="Special Invitation for {{firstName}}"
+                  className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
+                  placeholder="Subject line with {{firstName}}"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Description
                 </label>
                 <input
                   type="text"
                   value={modalDescription}
                   onChange={(e) => setModalDescription(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
-                  placeholder="Short note on what this template is for"
+                  className="w-full px-3 py-2 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
+                  placeholder="Description of template purpose"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-[11px] font-mono text-zinc-400">
                     HTML Template Code
                   </label>
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    Variables: {"{{firstName}}"}, {"{{company}}"}, {"{{fromName}}"}
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    Tokens: {"{{firstName}}"}, {"{{company}}"}, {"{{fromName}}"}
                   </span>
                 </div>
                 <textarea
@@ -841,21 +860,21 @@ export default function TemplatesPage() {
                   required
                   value={modalHtml}
                   onChange={(e) => setModalHtml(e.target.value)}
-                  className="w-full p-2.5 font-mono text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                  className="w-full p-2.5 font-mono text-xs bg-[#171A1D] border border-[#262A2E] text-zinc-200 rounded-lg focus:border-zinc-500 focus:outline-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+                  className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
                 >
                   Save Template
                 </button>
@@ -867,45 +886,45 @@ export default function TemplatesPage() {
 
       {/* MONGODB IMAGE ASSETS LIBRARY MODAL */}
       {imageLibraryOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
               <div>
                 <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-emerald-600" />
-                  <h2 className="text-base font-bold text-slate-900">
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  <h2 className="text-sm font-medium text-white">
                     MongoDB Template Image Assets
                   </h2>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Images stored in MongoDB collections, categorized into template folders.
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                  Direct database-backed image hosting organized in folders.
                 </p>
               </div>
               <button
                 onClick={() => setImageLibraryOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-zinc-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Upload image to specific folder */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <Folder className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-slate-700">Target Folder:</span>
+            <div className="p-3.5 bg-[#171A1D] border border-[#262A2E] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 font-mono">
+                <Folder className="w-4 h-4 text-zinc-400" />
+                <span className="text-zinc-400">Target Folder:</span>
                 <input
                   type="text"
                   value={uploadLibraryFolder}
                   onChange={(e) => setUploadLibraryFolder(e.target.value)}
-                  placeholder="general, banners, promos..."
-                  className="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white w-40 font-mono"
+                  placeholder="general, banners..."
+                  className="px-2.5 py-1 text-xs bg-[#111315] border border-[#262A2E] text-white rounded w-40 font-mono focus:outline-none"
                 />
               </div>
 
-              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-xs">
+              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors">
                 <UploadCloud className="w-3.5 h-3.5" />
-                <span>{uploadingLibraryImg ? "Uploading to MongoDB..." : "Upload New Image"}</span>
+                <span>{uploadingLibraryImg ? "Uploading..." : "Upload New Image"}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -917,8 +936,8 @@ export default function TemplatesPage() {
             </div>
 
             {/* Filter images by folder */}
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-500 font-medium">Filter by folder:</span>
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-zinc-500">Folder filter:</span>
               {["all", "general", "banners", "newsletters", "promotions"].map((f) => (
                 <button
                   key={f}
@@ -926,10 +945,10 @@ export default function TemplatesPage() {
                     setLibraryFolderFilter(f);
                     loadMongoImages(f);
                   }}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  className={`px-2.5 py-1 rounded text-xs transition-colors ${
                     libraryFolderFilter === f
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-white text-black font-medium"
+                      : "bg-[#171A1D] text-zinc-400 hover:text-zinc-200 border border-[#262A2E]"
                   }`}
                 >
                   {f}
@@ -939,41 +958,38 @@ export default function TemplatesPage() {
 
             {/* Images Grid */}
             {loadingImages ? (
-              <div className="py-12 text-center text-xs text-slate-500">
-                Loading MongoDB image records...
+              <div className="py-12 text-center text-xs font-mono text-zinc-500">
+                LOADING MONGODB IMAGE RECORDS...
               </div>
             ) : mongoImages.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-xl space-y-2">
-                <ImageIcon className="w-8 h-8 text-slate-300 mx-auto" />
-                <p>No template images found in this folder in MongoDB.</p>
-                <p className="text-[11px] text-slate-400">
-                  Upload images above to store them directly in MongoDB!
-                </p>
+              <div className="py-12 text-center text-xs font-mono text-zinc-500 border border-dashed border-[#262A2E] rounded-xl space-y-2">
+                <ImageIcon className="w-8 h-8 text-zinc-600 mx-auto" />
+                <p>No template images found in this folder.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1">
                 {mongoImages.map((img) => (
                   <div
                     key={img.id}
-                    className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs group flex flex-col justify-between"
+                    className="border border-[#262A2E] rounded-xl overflow-hidden bg-[#171A1D] group flex flex-col justify-between"
                   >
-                    <div className="h-28 bg-slate-100 relative overflow-hidden">
+                    <div className="h-28 bg-[#111315] relative overflow-hidden">
                       <img
                         src={img.url}
                         alt={img.filename}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
-                      <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      <span className="absolute bottom-1 left-1 bg-black/80 border border-[#262A2E] text-zinc-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
                         📁 {img.folder || "general"}
                       </span>
                     </div>
 
-                    <div className="p-2.5 text-xs space-y-2">
-                      <p className="font-semibold text-slate-800 truncate" title={img.filename}>
+                    <div className="p-2.5 text-xs space-y-2 font-mono">
+                      <p className="text-white truncate" title={img.filename}>
                         {img.filename}
                       </p>
 
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <div className="flex items-center justify-between pt-1 border-t border-[#262A2E]">
                         <button
                           type="button"
                           onClick={() => {
@@ -981,10 +997,10 @@ export default function TemplatesPage() {
                             setCopiedUrl(img.id);
                             setTimeout(() => setCopiedUrl(null), 2000);
                           }}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+                          className="inline-flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white"
                         >
                           {copiedUrl === img.id ? (
-                            <Check className="w-3 h-3 text-emerald-600" />
+                            <Check className="w-3 h-3 text-emerald-400" />
                           ) : (
                             <Copy className="w-3 h-3" />
                           )}
@@ -994,7 +1010,7 @@ export default function TemplatesPage() {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1"
+                          className="text-zinc-500 hover:text-red-400 p-1"
                           title="Delete from MongoDB"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1006,11 +1022,11 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+            <div className="flex justify-end pt-2 border-t border-[#262A2E]">
               <button
                 type="button"
                 onClick={() => setImageLibraryOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
               >
                 Close Library
               </button>
@@ -1021,31 +1037,31 @@ export default function TemplatesPage() {
 
       {/* PREVIEW TEMPLATE MODAL */}
       {previewTemplate && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
               <div>
-                <h2 className="text-base font-bold text-slate-900">{previewTemplate.name}</h2>
-                <p className="text-xs text-slate-500 font-mono">{previewTemplate.subject}</p>
+                <h2 className="text-sm font-medium text-white">{previewTemplate.name}</h2>
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">{previewTemplate.subject}</p>
               </div>
               <button
                 onClick={() => setPreviewTemplate(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-zinc-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+            <div className="flex-1 overflow-y-auto border border-[#262A2E] rounded-xl p-4 bg-[#08090A]">
               <iframe
                 title="Preview"
                 srcDoc={previewTemplate.htmlContent}
-                className="w-full min-h-[380px] bg-white rounded-lg border border-slate-200"
+                className="w-full min-h-[380px] bg-white rounded-lg border border-zinc-700"
               />
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-zinc-500 font-mono">
                 Created: {formatDate(previewTemplate.createdAt)}
               </span>
               <button
@@ -1053,7 +1069,7 @@ export default function TemplatesPage() {
                   router.push(`/dashboard/compose?templateId=${previewTemplate.id}`);
                   setPreviewTemplate(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Use in Campaign</span>

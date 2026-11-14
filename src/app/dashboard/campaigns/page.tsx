@@ -9,23 +9,18 @@ import {
   deleteCampaign,
   saveCampaign,
 } from "@/lib/store/db-service";
-import { Campaign, CampaignStatus } from "@/types";
+import { Campaign } from "@/types";
 import { formatDate, formatNumber } from "@/lib/utils";
 import {
   Megaphone,
   Plus,
   Search,
-  Filter,
   Copy,
   Trash2,
-  Edit,
-  ArrowUpRight,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
-  Send,
+  Eye,
   Calendar,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
 
 export default function CampaignsPage() {
@@ -72,7 +67,7 @@ export default function CampaignsPage() {
     };
 
     await saveCampaign(duplicated);
-    await loadData();
+    await loadData(true);
     router.push(`/dashboard/campaigns/${newId}`);
   };
 
@@ -80,7 +75,7 @@ export default function CampaignsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
     await deleteCampaign(userId, id);
-    await loadData();
+    await loadData(true);
   };
 
   // Cancel scheduled campaign
@@ -92,7 +87,7 @@ export default function CampaignsPage() {
       updatedAt: new Date().toISOString(),
     };
     await saveCampaign(updated);
-    await loadData();
+    await loadData(true);
   };
 
   const filteredCampaigns = campaigns.filter((c) => {
@@ -104,42 +99,52 @@ export default function CampaignsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 font-sans">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-[#1C2024]">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Campaigns</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage drafts, scheduled broadcasts, active delivery jobs, and past campaign telemetry.
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[#F5F5F5]">Campaigns</h1>
+          <p className="text-xs text-[#A1A1AA] mt-1 font-mono">
+            Manage drafts, scheduled broadcasts, active delivery jobs, and past campaign telemetry
           </p>
         </div>
 
-        <Link
-          href="/dashboard/compose"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Campaign</span>
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => loadData(true)}
+            disabled={loading}
+            className="p-2 text-[#A1A1AA] hover:text-white bg-[#111315] hover:bg-[#171A1D] border border-[#262A2E] rounded-md transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <Link
+            href="/dashboard/compose"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-[#08090A] bg-white hover:bg-[#E5E7EB] rounded-md shadow-sm transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Campaign</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="p-3 rounded-lg bg-[#111315] border border-[#262A2E] flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[#71717A] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search campaigns by name or subject..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            placeholder="Search campaigns..."
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#0D0F11] text-[#F5F5F5] border border-[#1C2024] rounded-md focus:border-[#45494E] focus:outline-none placeholder:text-[#71717A] font-mono"
           />
         </div>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+          className="w-full sm:w-auto px-3 py-1.5 text-xs bg-[#0D0F11] text-[#A1A1AA] border border-[#1C2024] rounded-md focus:border-[#45494E] focus:outline-none font-mono"
         >
           <option value="all">All Statuses</option>
           <option value="draft">Drafts</option>
@@ -153,130 +158,140 @@ export default function CampaignsPage() {
       </div>
 
       {/* Campaigns List Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="rounded-xl bg-[#111315] border border-[#262A2E] overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500">Loading campaigns...</div>
+          <div className="p-12 text-center text-xs font-mono text-[#71717A]">Loading campaigns...</div>
         ) : filteredCampaigns.length === 0 ? (
           <div className="p-12 text-center">
-            <Megaphone className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-slate-900">No campaigns found</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Start by creating and dispatching your first bulk email broadcast.
+            <Megaphone className="w-8 h-8 text-[#45494E] mx-auto mb-3" />
+            <h3 className="text-sm font-medium text-[#F5F5F5]">No campaigns found</h3>
+            <p className="text-xs text-[#71717A] mt-1 max-w-sm mx-auto font-mono">
+              Start by composing and dispatching your first bulk campaign.
             </p>
             <Link
               href="/dashboard/compose"
-              className="mt-4 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg shadow-sm"
+              className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-[#08090A] bg-white hover:bg-[#E5E7EB] rounded-md"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Compose Campaign</span>
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[#1C2024]">
             {filteredCampaigns.map((cmp) => {
-              const statusStyles: Record<string, string> = {
-                completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                completed_with_errors: "bg-amber-50 text-amber-700 border-amber-200",
-                sending: "bg-blue-50 text-blue-700 border-blue-200 animate-pulse",
-                queued: "bg-indigo-50 text-indigo-700 border-indigo-200",
-                draft: "bg-slate-100 text-slate-700 border-slate-200",
-                failed: "bg-red-50 text-red-700 border-red-200",
-                scheduled: "bg-purple-50 text-purple-700 border-purple-200",
-                cancelled: "bg-slate-100 text-slate-500 border-slate-200 line-through",
-              };
+              const isCompleted = cmp.status === "completed";
+              const isSending = ["sending", "queued"].includes(cmp.status);
+              const isFailed = cmp.status === "failed";
+              const isScheduled = cmp.status === "scheduled";
+              const isCancelled = cmp.status === "cancelled";
 
               return (
                 <div
                   key={cmp.id}
-                  className="p-5 hover:bg-slate-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="p-4 sm:p-5 hover:bg-[#171A1D]/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-2.5 mb-1">
                       <Link
                         href={`/dashboard/campaigns/${cmp.id}`}
-                        className="font-bold text-sm text-slate-900 hover:text-blue-600 truncate"
+                        className="font-medium text-sm text-[#F5F5F5] hover:text-white truncate"
                       >
                         {cmp.name}
                       </Link>
                       <span
-                        className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${
-                          statusStyles[cmp.status] || "bg-slate-100 text-slate-700"
+                        className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+                          isCompleted
+                            ? "bg-[#102719] text-[#22C55E] border-[#22C55E]/30"
+                            : isSending
+                            ? "bg-[#111315] text-[#60A5FA] border-[#60A5FA]/30"
+                            : isFailed
+                            ? "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30"
+                            : isScheduled
+                            ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30"
+                            : isCancelled
+                            ? "bg-[#171A1D] text-[#71717A] border-[#262A2E] line-through"
+                            : "bg-[#171A1D] text-[#A1A1AA] border-[#262A2E]"
                         }`}
                       >
                         {cmp.status.replace("_", " ")}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600 truncate">{cmp.subject}</p>
+                    <p className="text-xs text-[#A1A1AA] truncate font-mono">
+                      Subject: {cmp.subject}
+                    </p>
 
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-2">
-                      <span>Created {formatDate(cmp.createdAt)}</span>
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-[#71717A] mt-1.5">
+                      <span>{formatDate(cmp.createdAt)}</span>
+                      <span>·</span>
+                      <span>From: {cmp.fromName} &lt;{cmp.fromEmail}&gt;</span>
                       {cmp.scheduledFor && (
                         <>
-                          <span>•</span>
-                          <span className="text-purple-600 font-medium flex items-center gap-1">
+                          <span>·</span>
+                          <span className="flex items-center gap-1 text-[#F59E0B]">
                             <Calendar className="w-3 h-3" />
-                            Scheduled for {formatDate(cmp.scheduledFor)}
+                            Scheduled: {formatDate(cmp.scheduledFor)}
                           </span>
-                        </>
-                      )}
-                      {cmp.completedAt && (
-                        <>
-                          <span>•</span>
-                          <span>Completed {formatDate(cmp.completedAt)}</span>
-                        </>
-                      )}
-                      <span>•</span>
-                      <span>{cmp.recipientCount} recipients</span>
-                      {cmp.stats?.sent > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="text-emerald-600 font-semibold">
-                            {cmp.stats.delivered || cmp.stats.sent} sent
-                          </span>
-                        </>
-                      )}
-                      {cmp.stats?.failed > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="text-red-600 font-semibold">{cmp.stats.failed} failed</span>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    {cmp.status === "scheduled" && (
-                      <button
-                        onClick={() => handleCancelSchedule(cmp)}
-                        className="px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 rounded-lg border border-amber-200"
+                  {/* Telemetry Numbers & Actions */}
+                  <div className="flex items-center gap-6 sm:justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#1C2024]">
+                    <div className="text-right">
+                      <span className="text-sm font-mono font-semibold text-[#F5F5F5] block">
+                        {formatNumber(cmp.recipientCount || cmp.stats?.total || 0)}
+                      </span>
+                      <span className="text-[10px] font-mono text-[#71717A] block">
+                        {cmp.stats?.sent ? `${cmp.stats.sent} sent` : "recipients"}
+                      </span>
+                    </div>
+
+                    {cmp.stats?.sent ? (
+                      <div className="text-right">
+                        <span className="text-sm font-mono font-semibold text-[#22C55E] block">
+                          {((cmp.stats.opened || 0) / (cmp.stats.sent || 1) * 100).toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] font-mono text-[#71717A] block">open rate</span>
+                      </div>
+                    ) : null}
+
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/dashboard/campaigns/${cmp.id}`}
+                        className="p-1.5 text-[#A1A1AA] hover:text-white hover:bg-[#1D2125] rounded transition-colors"
+                        title="View Report"
                       >
-                        Cancel Schedule
+                        <Eye className="w-4 h-4" />
+                      </Link>
+
+                      <button
+                        onClick={() => handleDuplicate(cmp)}
+                        className="p-1.5 text-[#A1A1AA] hover:text-white hover:bg-[#1D2125] rounded transition-colors"
+                        title="Duplicate Campaign"
+                      >
+                        <Copy className="w-4 h-4" />
                       </button>
-                    )}
 
-                    <Link
-                      href={`/dashboard/campaigns/${cmp.id}`}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm"
-                    >
-                      View Details
-                    </Link>
+                      {cmp.status === "scheduled" && (
+                        <button
+                          onClick={() => handleCancelSchedule(cmp)}
+                          className="p-1.5 text-[#F59E0B] hover:bg-[#1D2125] rounded transition-colors"
+                          title="Cancel Scheduled Send"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
 
-                    <button
-                      onClick={() => handleDuplicate(cmp)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
-                      title="Duplicate Campaign"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(cmp.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                      title="Delete Campaign"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button
+                        onClick={() => handleDelete(cmp.id)}
+                        className="p-1.5 text-[#71717A] hover:text-[#EF4444] hover:bg-[#1D2125] rounded transition-colors"
+                        title="Delete Campaign"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

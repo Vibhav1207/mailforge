@@ -278,7 +278,6 @@ export default function ContactsManagementPage() {
     return matchesSearch && matchesStatus && matchesTag;
   });
 
-  // Extract unique tags
   const allTags = Array.from(new Set(contacts.flatMap((c) => c.tags || [])));
 
   return (
@@ -286,9 +285,9 @@ export default function ContactsManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Contacts Management</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Audience lists, suppression status, and CSV import/export controls.
+          <h1 className="text-xl font-medium tracking-tight text-white">Contacts Management</h1>
+          <p className="text-xs text-zinc-400 font-mono mt-1">
+            Audience directory, suppression states, and spreadsheet ingestion.
           </p>
         </div>
 
@@ -296,49 +295,49 @@ export default function ContactsManagementPage() {
           <button
             onClick={handleExportCsv}
             disabled={contacts.length === 0}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
           >
-            <Download className="w-4 h-4 text-slate-500" />
+            <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span>Export CSV</span>
           </button>
 
           <button
             onClick={() => setImportModalOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
           >
-            <Upload className="w-4 h-4 text-slate-500" />
-            <span>Import CSV</span>
+            <Upload className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Import Excel / CSV</span>
           </button>
 
           <button
             onClick={openAddModal}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Add Contact</span>
           </button>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-[#111315] p-3 rounded-xl border border-[#262A2E] flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, email, company..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            placeholder="Search name, email, company..."
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           {/* Status filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+            className="px-2.5 py-1.5 text-xs font-mono bg-[#171A1D] border border-[#262A2E] text-zinc-300 rounded-lg focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active (Deliverable)</option>
@@ -351,7 +350,7 @@ export default function ContactsManagementPage() {
             <select
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+              className="px-2.5 py-1.5 text-xs font-mono bg-[#171A1D] border border-[#262A2E] text-zinc-300 rounded-lg focus:outline-none"
             >
               <option value="all">All Tags</option>
               {allTags.map((t) => (
@@ -365,89 +364,93 @@ export default function ContactsManagementPage() {
       </div>
 
       {/* Contacts Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-500">Loading contacts...</div>
+          <div className="p-12 text-center text-xs font-mono text-zinc-500">
+            LOADING AUDIENCE RECORDS...
+          </div>
         ) : filteredContacts.length === 0 ? (
           <div className="p-12 text-center">
-            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-slate-900">No contacts found</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Add contacts manually or import a CSV file to begin sending.
+            <Users className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
+            <h3 className="text-sm font-medium text-white">No contacts found</h3>
+            <p className="text-xs text-zinc-500 font-mono mt-1 max-w-sm mx-auto">
+              Add contacts manually or import an Excel/CSV spreadsheet.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Contact</th>
-                  <th className="py-3 px-4">Company</th>
-                  <th className="py-3 px-4">Tags</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Created</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="bg-[#171A1D]/60 border-b border-[#262A2E] text-zinc-400 font-mono text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4 font-medium">Contact</th>
+                  <th className="py-3 px-4 font-medium">Company</th>
+                  <th className="py-3 px-4 font-medium">Tags</th>
+                  <th className="py-3 px-4 font-medium">Status</th>
+                  <th className="py-3 px-4 font-medium">Created</th>
+                  <th className="py-3 px-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#1C2024]">
                 {filteredContacts.map((c) => {
-                  const statusBadge: Record<string, { label: string; class: string }> = {
-                    active: { label: "Active", class: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                    unsubscribed: { label: "Unsubscribed", class: "bg-amber-50 text-amber-700 border-amber-200" },
-                    suppressed: { label: "Suppressed", class: "bg-red-50 text-red-700 border-red-200" },
+                  const statusColors: Record<string, string> = {
+                    active: "border-emerald-500/30 bg-emerald-950/40 text-emerald-400",
+                    unsubscribed: "border-amber-500/30 bg-amber-950/40 text-amber-400",
+                    suppressed: "border-red-500/30 bg-red-950/40 text-red-400",
                   };
 
-                  const badge = statusBadge[c.status] || statusBadge.active;
-
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={c.id} className="hover:bg-[#171A1D]/40 transition-colors">
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-900">
+                        <p className="font-medium text-white">
                           {[c.firstName, c.lastName].filter(Boolean).join(" ") || "—"}
                         </p>
-                        <p className="font-mono text-slate-500 text-[11px]">{c.email}</p>
+                        <p className="font-mono text-zinc-400 text-[11px]">{c.email}</p>
                       </td>
-                      <td className="py-3 px-4 text-slate-700">{c.company || "—"}</td>
+                      <td className="py-3 px-4 text-zinc-300">{c.company || "—"}</td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
                           {(c.tags || []).length > 0 ? (
                             c.tags!.map((t) => (
                               <span
                                 key={t}
-                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-medium"
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-[#171A1D] border border-[#262A2E] text-zinc-300 font-mono"
                               >
                                 {t}
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-zinc-600 font-mono text-[11px]">—</span>
                           )}
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold border uppercase ${badge.class}`}
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono border uppercase ${
+                            statusColors[c.status] || "border-zinc-700 bg-zinc-800 text-zinc-400"
+                          }`}
                         >
-                          {badge.label}
+                          {c.status}
                         </span>
                         {c.suppressionReason && (
-                          <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs">
+                          <p className="text-[10px] text-zinc-500 font-mono mt-0.5 truncate max-w-xs">
                             {c.suppressionReason}
                           </p>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-slate-500">{formatDate(c.createdAt)}</td>
+                      <td className="py-3 px-4 text-zinc-400 font-mono text-[11px]">
+                        {formatDate(c.createdAt)}
+                      </td>
                       <td className="py-3 px-4 text-right space-x-2">
                         <button
                           onClick={() => openEditModal(c)}
-                          className="p-1 text-slate-400 hover:text-blue-600"
+                          className="p-1 text-zinc-500 hover:text-white transition-colors"
                           title="Edit Contact"
                         >
                           <Edit2 className="w-3.5 h-3.5 inline" />
                         </button>
                         <button
                           onClick={() => handleDeleteContact(c.id)}
-                          className="p-1 text-slate-400 hover:text-red-600"
+                          className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
                           title="Delete Contact"
                         >
                           <Trash2 className="w-3.5 h-3.5 inline" />
@@ -464,19 +467,19 @@ export default function ContactsManagementPage() {
 
       {/* MODAL: Add / Edit Contact */}
       {contactModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+              <h3 className="text-sm font-medium text-white">
                 {editingContact ? "Edit Contact" : "Add New Contact"}
               </h3>
-              <button onClick={() => setContactModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={() => setContactModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+              <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-400 text-xs rounded-lg flex items-center gap-2 font-mono">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
@@ -484,7 +487,7 @@ export default function ContactsManagementPage() {
 
             <form onSubmit={handleSaveContact} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Email Address *
                 </label>
                 <input
@@ -492,90 +495,90 @@ export default function ContactsManagementPage() {
                   required
                   value={modalEmail}
                   onChange={(e) => setModalEmail(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
                   placeholder="contact@company.com"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     First Name
                   </label>
                   <input
                     type="text"
                     value={modalFirstName}
                     onChange={(e) => setModalFirstName(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                     placeholder="Alex"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Last Name
                   </label>
                   <input
                     type="text"
                     value={modalLastName}
                     onChange={(e) => setModalLastName(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                     placeholder="Mercer"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Company
                 </label>
                 <input
                   type="text"
                   value={modalCompany}
                   onChange={(e) => setModalCompany(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                   placeholder="Apex Tech"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Tags (comma separated)
                 </label>
                 <input
                   type="text"
                   value={modalTags}
                   onChange={(e) => setModalTags(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
                   placeholder="VIP, Engineering, Enterprise"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   Status
                 </label>
                 <select
                   value={modalStatus}
                   onChange={(e) => setModalStatus(e.target.value as ContactStatus)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:outline-none"
                 >
                   <option value="active">Active (Deliverable)</option>
-                  <option value="unsubscribed">Unsubscribed (Excluded from sends)</option>
+                  <option value="unsubscribed">Unsubscribed (Excluded)</option>
                   <option value="suppressed">Suppressed / Bounced (Excluded)</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
                 <button
                   type="button"
                   onClick={() => setContactModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg"
+                  className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+                  className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
                 >
                   Save Contact
                 </button>
@@ -587,21 +590,21 @@ export default function ContactsManagementPage() {
 
       {/* MODAL: Import CSV Contacts */}
       {importModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Import Contacts from Excel or CSV</h3>
-              <button onClick={() => setImportModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+              <h3 className="text-sm font-medium text-white">Import Contacts from Excel or CSV</h3>
+              <button onClick={() => setImportModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <label className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-slate-50">
-              <FileSpreadsheet className="w-8 h-8 text-blue-600 mb-2" />
-              <span className="text-xs font-semibold text-slate-800">
-                Select Excel (.xlsx, .xls) or CSV file to upload
+            <label className="border border-dashed border-[#262A2E] hover:border-zinc-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors text-center bg-[#171A1D]/40">
+              <FileSpreadsheet className="w-8 h-8 text-zinc-400 mb-2" />
+              <span className="text-xs font-medium text-white">
+                Select Excel (.xlsx, .xls) or CSV file
               </span>
-              <span className="text-[11px] text-slate-500 mt-1">
+              <span className="text-[11px] text-zinc-500 font-mono mt-1">
                 Auto-detects email, firstName, lastName, company, and custom fields.
               </span>
               <input type="file" accept=".xlsx,.xls,.csv,.tsv" onChange={handleCsvFile} className="hidden" />
@@ -609,12 +612,12 @@ export default function ContactsManagementPage() {
 
             {csvPreviewRows.length > 0 && (
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-semibold text-slate-700">
+                <div className="flex justify-between text-xs font-mono text-zinc-400">
                   <span>Preview ({csvTotalCount} rows detected):</span>
                 </div>
-                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50 font-mono text-[11px]">
+                <div className="max-h-40 overflow-y-auto border border-[#262A2E] rounded-lg p-2.5 bg-[#171A1D] font-mono text-[11px] text-zinc-300">
                   {csvPreviewRows.map((r, i) => (
-                    <div key={i} className="truncate border-b border-slate-200/60 pb-1 mb-1">
+                    <div key={i} className="truncate border-b border-[#262A2E] pb-1 mb-1">
                       {JSON.stringify(r)}
                     </div>
                   ))}
@@ -622,11 +625,11 @@ export default function ContactsManagementPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262A2E]">
               <button
                 type="button"
                 onClick={() => setImportModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
               >
                 Cancel
               </button>
@@ -634,7 +637,7 @@ export default function ContactsManagementPage() {
                 type="button"
                 onClick={handleCommitCsvImport}
                 disabled={csvTotalCount === 0}
-                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm disabled:opacity-50"
+                className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-40"
               >
                 Import {csvTotalCount} Contacts
               </button>

@@ -9,16 +9,11 @@ import { formatDate, formatNumber } from "@/lib/utils";
 import {
   History,
   Search,
-  Filter,
   BarChart2,
-  TrendingUp,
   CheckCircle2,
   AlertCircle,
   Clock,
   ArrowUpRight,
-  ShieldCheck,
-  Send,
-  Calendar,
   Eye,
   MousePointerClick,
 } from "lucide-react";
@@ -74,97 +69,97 @@ export default function SendingHistoryPage() {
     <div className="space-y-6 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-xl font-medium tracking-tight text-white">
           Sending History & Analytics
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Audit past email campaigns, track open rates, link clicks, and delivery performance.
+        <p className="text-xs text-zinc-400 font-mono mt-1">
+          Historical campaign telemetry, deliverability ratios, and recipient engagement.
         </p>
       </div>
 
       {/* Aggregate Telemetry Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Total Sent
           </span>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalSent)}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Dispatched emails</p>
+          <p className="text-2xl font-mono font-medium text-white mt-1">{formatNumber(totalSent)}</p>
+          <p className="text-[10px] font-mono text-zinc-500 mt-0.5">Dispatches</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Delivered
           </span>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{formatNumber(totalDelivered)}</p>
-          <p className="text-[11px] text-emerald-600 mt-0.5">{deliveryRate}% delivery rate</p>
+          <p className="text-2xl font-mono font-medium text-emerald-400 mt-1">{formatNumber(totalDelivered)}</p>
+          <p className="text-[10px] font-mono text-emerald-400/80 mt-0.5">{deliveryRate}% rate</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
-          <span className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
-            <Eye className="w-3 h-3 text-blue-600" />
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+            <Eye className="w-3 h-3 text-zinc-400" />
             Opened
           </span>
-          <p className="text-2xl font-bold text-blue-700 mt-1">{formatNumber(totalOpened)}</p>
-          <p className="text-[11px] text-blue-600 font-medium mt-0.5">{openRate}% open rate</p>
+          <p className="text-2xl font-mono font-medium text-white mt-1">{formatNumber(totalOpened)}</p>
+          <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{openRate}% rate</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-indigo-200 shadow-sm bg-indigo-50/20">
-          <span className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
-            <MousePointerClick className="w-3 h-3 text-indigo-600" />
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+            <MousePointerClick className="w-3 h-3 text-zinc-400" />
             Clicked
           </span>
-          <p className="text-2xl font-bold text-indigo-700 mt-1">{formatNumber(totalClicked)}</p>
-          <p className="text-[11px] text-indigo-600 font-medium mt-0.5">{clickRate}% CTR</p>
+          <p className="text-2xl font-mono font-medium text-white mt-1">{formatNumber(totalClicked)}</p>
+          <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{clickRate}% CTR</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Bounced
           </span>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{formatNumber(totalBounced)}</p>
-          <p className="text-[11px] text-amber-600 mt-0.5">{bounceRate}% bounce rate</p>
+          <p className="text-2xl font-mono font-medium text-amber-400 mt-1">{formatNumber(totalBounced)}</p>
+          <p className="text-[10px] font-mono text-amber-400/80 mt-0.5">{bounceRate}% rate</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Failed
           </span>
-          <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(totalFailed)}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">{formatNumber(totalUnsubscribed)} opt-outs</p>
+          <p className="text-2xl font-mono font-medium text-red-400 mt-1">{formatNumber(totalFailed)}</p>
+          <p className="text-[10px] font-mono text-zinc-500 mt-0.5">{formatNumber(totalUnsubscribed)} opt-outs</p>
         </div>
       </div>
 
       {/* Visual Volume and Performance Breakdown */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+        <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
           <div className="flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-blue-600" />
-            <h2 className="text-sm font-semibold text-slate-900">Campaign Delivery & Engagement Ratio</h2>
+            <BarChart2 className="w-4 h-4 text-zinc-400" />
+            <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400">Campaign Delivery & Engagement Ratio</h2>
           </div>
-          <span className="text-xs text-slate-500">Live Telemetry</span>
+          <span className="text-[11px] font-mono text-zinc-500">Live Telemetry</span>
         </div>
 
         {totalSent > 0 ? (
           <div className="space-y-4">
             <div>
-              <div className="flex justify-between text-xs text-slate-700 mb-1">
+              <div className="flex justify-between text-xs font-mono text-zinc-400 mb-2">
                 <span>Engagement Proportion</span>
-                <span className="font-semibold text-blue-600">{openRate}% Opened · {clickRate}% Clicked</span>
+                <span className="text-white">{openRate}% Opened · {clickRate}% Clicked</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
+              <div className="w-full h-2.5 bg-[#171A1D] border border-[#262A2E] rounded-full overflow-hidden flex">
                 <div
-                  className="bg-blue-500 h-full"
+                  className="bg-zinc-200 h-full"
                   style={{ width: `${Math.min(100, (totalOpened / (totalSent || 1)) * 100)}%` }}
                   title="Opened"
                 />
                 <div
-                  className="bg-indigo-500 h-full"
+                  className="bg-zinc-400 h-full"
                   style={{ width: `${Math.min(100, (totalClicked / (totalSent || 1)) * 100)}%` }}
                   title="Clicked"
                 />
                 <div
-                  className="bg-amber-400 h-full"
+                  className="bg-amber-500 h-full"
                   style={{ width: `${Math.min(100, (totalBounced / (totalSent || 1)) * 100)}%` }}
                   title="Bounced"
                 />
@@ -176,54 +171,54 @@ export default function SendingHistoryPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-6 text-xs text-slate-600 pt-2">
+            <div className="flex flex-wrap items-center gap-6 text-xs font-mono text-zinc-400 pt-1">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
                 <span>Opened ({totalOpened})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-zinc-400" />
                 <span>Clicked ({totalClicked})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                 <span>Delivered ({totalDelivered})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                 <span>Bounced ({totalBounced})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
                 <span>Failed ({totalFailed})</span>
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center text-xs text-slate-500">
+          <div className="p-8 text-center text-xs font-mono text-zinc-500">
             Send your first campaign to generate real telemetry visualization.
           </div>
         )}
       </div>
 
       {/* History Table & Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">
+        <div className="p-3 border-b border-[#262A2E] flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search history..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
             />
           </div>
 
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
+            className="px-2.5 py-1.5 text-xs font-mono bg-[#171A1D] border border-[#262A2E] text-zinc-300 rounded-lg focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="completed">Completed</option>
@@ -233,23 +228,23 @@ export default function SendingHistoryPage() {
         </div>
 
         {filteredCampaigns.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-500">No history records found.</div>
+          <div className="p-12 text-center text-xs font-mono text-zinc-500">No history records found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Campaign</th>
-                  <th className="py-3 px-4">Dispatched Date</th>
-                  <th className="py-3 px-4">Total</th>
-                  <th className="py-3 px-4">Delivered</th>
-                  <th className="py-3 px-4 text-blue-700">Opened</th>
-                  <th className="py-3 px-4 text-indigo-700">Clicked</th>
-                  <th className="py-3 px-4">Bounced</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr className="bg-[#171A1D]/60 border-b border-[#262A2E] text-zinc-400 font-mono text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4 font-medium">Campaign</th>
+                  <th className="py-3 px-4 font-medium">Dispatched</th>
+                  <th className="py-3 px-4 font-medium">Total</th>
+                  <th className="py-3 px-4 font-medium">Delivered</th>
+                  <th className="py-3 px-4 font-medium">Opened</th>
+                  <th className="py-3 px-4 font-medium">Clicked</th>
+                  <th className="py-3 px-4 font-medium">Bounced</th>
+                  <th className="py-3 px-4 text-right font-medium">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#1C2024]">
                 {filteredCampaigns.map((c) => {
                   const campSent = c.stats?.sent || c.recipientCount || 1;
                   const campOpened = c.stats?.opened || 0;
@@ -258,50 +253,50 @@ export default function SendingHistoryPage() {
                   const campClickRate = ((campClicked / campSent) * 100).toFixed(0);
 
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={c.id} className="hover:bg-[#171A1D]/40 transition-colors">
                       <td className="py-3 px-4">
                         <Link
                           href={`/dashboard/campaigns/${c.id}`}
-                          className="font-bold text-slate-900 hover:text-blue-600 block"
+                          className="font-medium text-white hover:text-zinc-300 block"
                         >
                           {c.name}
                         </Link>
-                        <span className="text-[11px] text-slate-500 truncate block max-w-xs">
+                        <span className="text-[11px] text-zinc-500 font-mono truncate block max-w-xs mt-0.5">
                           {c.subject}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-500">
+                      <td className="py-3 px-4 text-zinc-400 font-mono text-[11px]">
                         {formatDate(c.completedAt || c.createdAt)}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-800">
+                      <td className="py-3 px-4 font-mono text-zinc-200">
                         {c.recipientCount}
                       </td>
-                      <td className="py-3 px-4 text-emerald-600 font-semibold">
+                      <td className="py-3 px-4 font-mono text-emerald-400">
                         {c.stats?.delivered || 0}
                       </td>
-                      <td className="py-3 px-4 text-blue-700 font-semibold">
+                      <td className="py-3 px-4 font-mono text-white">
                         <div className="flex items-center gap-1.5">
-                          <Eye className="w-3.5 h-3.5 text-blue-500" />
+                          <Eye className="w-3.5 h-3.5 text-zinc-400" />
                           <span>{campOpened}</span>
-                          <span className="text-[10px] text-blue-500 font-normal">({campOpenRate}%)</span>
+                          <span className="text-[10px] text-zinc-500">({campOpenRate}%)</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-indigo-700 font-semibold">
+                      <td className="py-3 px-4 font-mono text-white">
                         <div className="flex items-center gap-1.5">
-                          <MousePointerClick className="w-3.5 h-3.5 text-indigo-500" />
+                          <MousePointerClick className="w-3.5 h-3.5 text-zinc-400" />
                           <span>{campClicked}</span>
-                          <span className="text-[10px] text-indigo-500 font-normal">({campClickRate}%)</span>
+                          <span className="text-[10px] text-zinc-500">({campClickRate}%)</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-amber-600 font-semibold">
+                      <td className="py-3 px-4 font-mono text-amber-400">
                         {c.stats?.bounced || 0}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <Link
                           href={`/dashboard/campaigns/${c.id}`}
-                          className="text-xs font-semibold text-blue-600 hover:underline inline-flex items-center justify-end gap-1"
+                          className="text-xs font-mono text-zinc-400 hover:text-white inline-flex items-center justify-end gap-1"
                         >
-                          <span>Full Report</span>
+                          <span>Report</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
                         </Link>
                       </td>

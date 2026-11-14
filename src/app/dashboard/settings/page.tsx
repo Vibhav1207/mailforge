@@ -106,7 +106,6 @@ export default function SettingsPage() {
         setSmtpSecure(Boolean(profile.settings.smtp.secure));
       }
     } else {
-      // Default initial states
       const defaultMail = user?.email || "";
       setGmailEmail(defaultMail);
       setFromEmail(defaultMail);
@@ -114,7 +113,6 @@ export default function SettingsPage() {
     }
   }, [profile, user]);
 
-  // Apply quick presets for custom SMTP
   const applyPreset = (preset: "brevo" | "postmark" | "custom") => {
     if (preset === "brevo") {
       setSmtpHost("smtp-relay.brevo.com");
@@ -131,7 +129,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Test credentials connection
   const handleTestConnection = async () => {
     setTestingConnection(true);
     setTestResult(null);
@@ -176,7 +173,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Send a test email directly through the active connection
   const handleSendTestMessage = async () => {
     setSendingTestEmail(true);
     setTestEmailResult(null);
@@ -202,8 +198,8 @@ export default function SettingsPage() {
           to: target,
           subject: "Test Dispatch from Postvane",
           htmlContent: `
-            <div style="font-family: sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <h2 style="color: #2563eb; margin-top: 0;">🎉 Postvane Delivery Verified!</h2>
+            <div style="font-family: sans-serif; padding: 24px; border: 1px solid #262A2E; border-radius: 8px; background: #ffffff; color: #111827;">
+              <h2 style="color: #111827; margin-top: 0;">Postvane Delivery Verified</h2>
               <p>Your <strong>${isGmailMode ? "Gmail Google App Password" : "Custom SMTP"}</strong> configuration is functioning correctly.</p>
               <p style="color: #64748b; font-size: 13px;">Sender: ${fromName} &lt;${fromEmail || userEmail}&gt;</p>
               <p style="color: #64748b; font-size: 12px; margin-top: 24px;">Sent via Postvane Production Engine.</p>
@@ -284,7 +280,7 @@ export default function SettingsPage() {
       await refreshProfile();
       setStatusMessage({
         type: "success",
-        text: "Configuration saved successfully! Your email sending credentials are active.",
+        text: "Configuration saved successfully. Delivery credentials are active.",
       });
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
@@ -301,33 +297,33 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl pb-16">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Settings & Delivery Engine</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Connect your Gmail account via Google App Password or custom SMTP to dispatch unlimited bulk emails.
+        <h1 className="text-xl font-medium tracking-tight text-white">Settings & Delivery Transport</h1>
+        <p className="text-xs text-zinc-400 font-mono mt-1">
+          Configure Gmail App Passwords, external SMTP relays, and default sender identity.
         </p>
       </div>
 
       {statusMessage && (
         <div
-          className={`p-3.5 border text-xs rounded-xl flex items-center gap-2.5 transition-all ${
+          className={`p-3.5 border text-xs rounded-xl flex items-center gap-2.5 transition-all font-mono ${
             statusMessage.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-rose-50 border-rose-200 text-rose-800"
+              ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+              : "bg-red-950/40 border-red-500/30 text-red-400"
           }`}
         >
           {statusMessage.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           )}
-          <span className="font-medium">{statusMessage.text}</span>
+          <span>{statusMessage.text}</span>
         </div>
       )}
 
       {/* Profile Overview Card */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-          <User className="w-4 h-4 text-slate-600" />
+      <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+          <User className="w-3.5 h-3.5" />
           Operator Account
         </h2>
 
@@ -336,26 +332,26 @@ export default function SettingsPage() {
             <img
               src={profile?.photoURL || user?.photoURL!}
               alt="Profile"
-              className="w-12 h-12 rounded-full border border-slate-300 object-cover"
+              className="w-11 h-11 rounded-full border border-[#262A2E] object-cover"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-base">
+            <div className="w-11 h-11 rounded-full bg-[#171A1D] border border-[#262A2E] text-white flex items-center justify-center font-bold text-sm">
               {(profile?.displayName || user?.displayName || "U").charAt(0).toUpperCase()}
             </div>
           )}
 
           <div>
-            <p className="font-bold text-sm text-slate-900">
+            <p className="font-medium text-sm text-white">
               {profile?.displayName || user?.displayName || "Email Operator"}
             </p>
-            <p className="text-xs text-slate-500 font-mono">
+            <p className="text-xs text-zinc-400 font-mono mt-0.5">
               {profile?.email || user?.email || ""}
             </p>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            <div className="mt-1 flex items-center gap-2 font-mono">
+              <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-[#171A1D] text-zinc-300 border border-[#262A2E]">
                 Google Authenticated
               </span>
-              {userId && <span className="text-[10px] text-slate-400">UID: {userId}</span>}
+              {userId && <span className="text-[10px] text-zinc-600">UID: {userId.slice(0, 12)}...</span>}
             </div>
           </div>
         </div>
@@ -364,18 +360,15 @@ export default function SettingsPage() {
       {/* Main Settings Form */}
       <form onSubmit={handleSaveSettings} className="space-y-6">
         {/* Sending Service Engine Selection */}
-        <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-sm space-y-5 bg-gradient-to-b from-blue-50/20 to-white">
-          <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+          <div className="flex items-start justify-between border-b border-[#262A2E] pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <Server className="w-5 h-5 text-blue-600" />
-                <h2 className="text-base font-bold text-slate-900">Email Sending Engine</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Zero Third-Party Quotas
-                </span>
+                <Server className="w-4 h-4 text-zinc-400" />
+                <h2 className="text-sm font-medium text-white">Email Delivery Transport</h2>
               </div>
-              <p className="text-xs text-slate-600 mt-1">
-                Select how you dispatch emails. Connect directly via Google App Password for effortless Gmail sending, or enter custom SMTP credentials.
+              <p className="text-xs text-zinc-400 font-mono mt-1">
+                Select your dispatch method. Connect via Google App Password for Gmail sending or configure a custom SMTP server.
               </p>
             </div>
           </div>
@@ -388,69 +381,65 @@ export default function SettingsPage() {
                 setDeliveryMethod("gmail_app_password");
                 if (gmailEmail && !fromEmail) setFromEmail(gmailEmail);
               }}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
                 deliveryMethod === "gmail_app_password"
-                  ? "border-blue-600 bg-blue-50/50 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
+                  ? "border-white bg-[#171A1D]"
+                  : "border-[#262A2E] hover:border-zinc-600 bg-[#0D0F11]"
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-xs font-black">
+                <span className="font-medium text-xs text-white flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-white text-black flex items-center justify-center text-[10px] font-bold">
                     G
                   </div>
-                  Gmail (Google App Password)
+                  Gmail (App Password)
                 </span>
                 {deliveryMethod === "gmail_app_password" && (
-                  <Check className="w-4 h-4 text-blue-600 font-bold" />
+                  <Check className="w-3.5 h-3.5 text-white" />
                 )}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Connect your personal or Workspace Gmail using a 16-character Google App Password. Instant setup, high inbox delivery.
+              <p className="text-xs text-zinc-400 leading-relaxed font-mono">
+                Connect your personal or Workspace Gmail via a 16-character Google App Password. Port 465 SSL.
               </p>
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-blue-700 font-medium">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Recommended for all senders</span>
-              </div>
             </div>
 
             {/* Custom SMTP Server Card */}
             <div
               onClick={() => setDeliveryMethod("custom_smtp")}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
                 deliveryMethod === "custom_smtp"
-                  ? "border-blue-600 bg-blue-50/50 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
+                  ? "border-white bg-[#171A1D]"
+                  : "border-[#262A2E] hover:border-zinc-600 bg-[#0D0F11]"
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  Custom SMTP Server
+                <span className="font-medium text-xs text-white flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-zinc-400" />
+                  Custom SMTP Relay
                 </span>
                 {deliveryMethod === "custom_smtp" && (
-                  <Check className="w-4 h-4 text-blue-600 font-bold" />
+                  <Check className="w-3.5 h-3.5 text-white" />
                 )}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Connect any external mail server (AWS SES, Brevo, Postmark, or private VPS host). Fully customizable host and ports.
+              <p className="text-xs text-zinc-400 leading-relaxed font-mono">
+                Connect any external mail server (AWS SES, Brevo, Postmark, or private VPS host).
               </p>
             </div>
           </div>
 
           {/* GMAIL APP PASSWORD CONFIGURATION PANEL */}
           {deliveryMethod === "gmail_app_password" && (
-            <div className="p-5 bg-slate-50/80 border border-slate-200 rounded-xl space-y-4">
+            <div className="p-4 bg-[#171A1D] border border-[#262A2E] rounded-xl space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-                  Gmail Connection Credentials
+                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  Gmail Credentials
                 </span>
 
                 <button
                   type="button"
                   onClick={() => setShowHelpGuide(!showHelpGuide)}
-                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
+                  className="text-[11px] font-mono text-zinc-400 hover:text-white flex items-center gap-1"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                   <span>{showHelpGuide ? "Hide instructions" : "How to generate App Password?"}</span>
@@ -459,44 +448,44 @@ export default function SettingsPage() {
 
               {/* Step-by-Step Google App Password Tutorial Box */}
               {showHelpGuide && (
-                <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl text-xs space-y-2 text-slate-700">
-                  <p className="font-bold text-blue-900 flex items-center gap-1.5">
-                    <Info className="w-4 h-4 text-blue-600" />
+                <div className="p-4 bg-[#111315] border border-[#262A2E] rounded-xl text-xs space-y-2 text-zinc-300 font-mono">
+                  <p className="font-medium text-white flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-zinc-400" />
                     How to get your 16-character Google App Password:
                   </p>
-                  <ol className="list-decimal list-inside space-y-1 pl-1 text-[11.5px] leading-relaxed">
+                  <ol className="list-decimal list-inside space-y-1 pl-1 text-[11px] leading-relaxed text-zinc-400">
                     <li>
-                      Go to your{" "}
+                      Visit{" "}
                       <a
                         href="https://myaccount.google.com/security"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 font-semibold underline inline-flex items-center gap-0.5"
+                        className="text-white underline inline-flex items-center gap-0.5"
                       >
                         Google Account Security <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </li>
-                    <li>Ensure <strong>2-Step Verification</strong> is switched <strong>ON</strong>.</li>
+                    <li>Ensure <strong>2-Step Verification</strong> is switched ON.</li>
                     <li>
-                      Open the{" "}
+                      Open{" "}
                       <a
                         href="https://myaccount.google.com/apppasswords"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 font-semibold underline inline-flex items-center gap-0.5"
+                        className="text-white underline inline-flex items-center gap-0.5"
                       >
-                        App Passwords page <ExternalLink className="w-2.5 h-2.5" />
+                        App Passwords <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </li>
-                    <li>Enter <strong>Postvane</strong> in the app name box and click <strong>Create</strong>.</li>
-                    <li>Copy the 16-character code (e.g. <code>abcd efgh ijkl mnop</code>) and paste it below.</li>
+                    <li>Enter <strong>Postvane</strong> and click Create.</li>
+                    <li>Copy the 16-character code and paste below.</li>
                   </ol>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Gmail Address
                   </label>
                   <input
@@ -509,20 +498,20 @@ export default function SettingsPage() {
                       }
                     }}
                     placeholder="yourname@gmail.com"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                    className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
                     required
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Emails will be delivered from this Gmail account via SSL (Port 465).
+                  <p className="text-[10px] text-zinc-500 font-mono mt-1">
+                    Dispatched via smtp.gmail.com:465 (SSL).
                   </p>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-slate-700">
+                    <label className="block text-[11px] font-mono text-zinc-400">
                       Google App Password
                     </label>
-                    <span className="text-[10px] text-slate-400 font-mono">16 characters</span>
+                    <span className="text-[10px] text-zinc-600 font-mono">16 characters</span>
                   </div>
 
                   <div className="relative">
@@ -531,53 +520,50 @@ export default function SettingsPage() {
                       value={gmailAppPassword}
                       onChange={(e) => setGmailAppPassword(e.target.value)}
                       placeholder="xxxx xxxx xxxx xxxx"
-                      className="w-full px-3 py-2 pr-10 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono tracking-wider"
+                      className="w-full px-3 py-1.5 pr-10 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono tracking-wider"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowGmailPassword(!showGmailPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
                     >
                       {showGmailPassword ? (
-                        <EyeOff className="w-4 h-4" />
+                        <EyeOff className="w-3.5 h-3.5" />
                       ) : (
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Spaces will be automatically removed when authenticating.
-                  </p>
                 </div>
               </div>
 
               {/* Actions & Verification */}
-              <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200">
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#262A2E]">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleTestConnection}
                     disabled={testingConnection || !gmailEmail || !gmailAppPassword}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg transition-colors shadow-xs disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors disabled:opacity-40"
                   >
-                    <Activity className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{testingConnection ? "Verifying..." : "Test Gmail Connection"}</span>
+                    <Activity className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>{testingConnection ? "Verifying..." : "Test Connection"}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleSendTestMessage}
                     disabled={sendingTestEmail || !gmailEmail || !gmailAppPassword}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition-colors shadow-xs disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors disabled:opacity-40"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{sendingTestEmail ? "Sending..." : "Send Test Email"}</span>
                   </button>
                 </div>
 
-                <span className="text-[11px] text-slate-500">
-                  Dispatcher: <strong className="text-slate-700">smtp.gmail.com:465 (SSL)</strong>
+                <span className="text-[10px] text-zinc-500 font-mono">
+                  smtp.gmail.com:465 (SSL)
                 </span>
               </div>
             </div>
@@ -585,31 +571,31 @@ export default function SettingsPage() {
 
           {/* CUSTOM SMTP CONFIGURATION DETAILS */}
           {deliveryMethod === "custom_smtp" && (
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+            <div className="p-4 bg-[#171A1D] border border-[#262A2E] rounded-xl space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
                   SMTP Server Credentials
                 </span>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-500 text-[11px]">Quick Presets:</span>
+                <div className="flex items-center gap-2 text-xs font-mono">
+                  <span className="text-zinc-500 text-[11px]">Presets:</span>
                   <button
                     type="button"
                     onClick={() => applyPreset("brevo")}
-                    className="px-2 py-0.5 text-[11px] font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 transition-colors"
+                    className="px-2 py-0.5 text-[11px] bg-[#111315] hover:bg-[#1D2125] border border-[#262A2E] rounded text-zinc-300 transition-colors"
                   >
                     Brevo
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("postmark")}
-                    className="px-2 py-0.5 text-[11px] font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 transition-colors"
+                    className="px-2 py-0.5 text-[11px] bg-[#111315] hover:bg-[#1D2125] border border-[#262A2E] rounded text-zinc-300 transition-colors"
                   >
                     Postmark
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset("custom")}
-                    className="px-2 py-0.5 text-[11px] font-medium bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 transition-colors"
+                    className="px-2 py-0.5 text-[11px] bg-[#111315] hover:bg-[#1D2125] border border-[#262A2E] rounded text-zinc-300 transition-colors"
                   >
                     Custom
                   </button>
@@ -618,47 +604,47 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     SMTP Host / Server
                   </label>
                   <input
                     type="text"
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="e.g. smtp.mailgun.org or mail.yourdomain.com"
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                    placeholder="smtp.mailgun.org or mail.yourdomain.com"
+                    className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Port
                   </label>
                   <input
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                    className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Username / SMTP User
                   </label>
                   <input
                     type="text"
                     value={smtpUser}
                     onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="e.g. apikey or user@domain.com"
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                    placeholder="user@domain.com"
+                    className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                     Password / API Secret
                   </label>
                   <div className="relative">
@@ -666,13 +652,13 @@ export default function SettingsPage() {
                       type={showSmtpPassword ? "text" : "password"}
                       value={smtpPass}
                       onChange={(e) => setSmtpPass(e.target.value)}
-                      placeholder="Enter SMTP password or API token"
-                      className="w-full px-3 py-1.5 pr-10 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                      placeholder="SMTP password or secret"
+                      className="w-full px-3 py-1.5 pr-10 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowSmtpPassword(!showSmtpPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
                     >
                       {showSmtpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -681,14 +667,14 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-mono text-zinc-300">
                   <input
                     type="checkbox"
                     checked={smtpSecure}
                     onChange={(e) => setSmtpSecure(e.target.checked)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                    className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                   />
-                  <span>Use SSL/TLS (Default on Port 465)</span>
+                  <span>SSL/TLS (Default Port 465)</span>
                 </label>
 
                 <div className="flex items-center gap-2">
@@ -696,19 +682,19 @@ export default function SettingsPage() {
                     type="button"
                     onClick={handleTestConnection}
                     disabled={testingConnection || !smtpHost || !smtpUser}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg transition-colors shadow-xs disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors disabled:opacity-40"
                   >
-                    <Activity className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{testingConnection ? "Testing..." : "Test Connection"}</span>
+                    <Activity className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>{testingConnection ? "Testing..." : "Test"}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleSendTestMessage}
                     disabled={sendingTestEmail || !smtpHost || !smtpUser}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition-colors shadow-xs disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors disabled:opacity-40"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{sendingTestEmail ? "Sending..." : "Send Test Email"}</span>
                   </button>
                 </div>
@@ -719,22 +705,22 @@ export default function SettingsPage() {
           {/* Connection Test Status Feedback */}
           {testResult && (
             <div
-              className={`p-3 text-xs rounded-lg border flex items-start gap-2 ${
+              className={`p-3 text-xs rounded-lg border flex items-start gap-2 font-mono ${
                 testResult.success
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  : "bg-rose-50 border-rose-200 text-rose-800"
+                  ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+                  : "bg-red-950/40 border-red-500/30 text-red-400"
               }`}
             >
               {testResult.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               )}
-              <div className="space-y-1">
-                <span className="font-semibold block">
+              <div className="space-y-0.5">
+                <span className="font-medium block">
                   {testResult.success ? "Authentication Successful" : "Authentication Error"}
                 </span>
-                <span className="leading-relaxed">{testResult.message}</span>
+                <span className="leading-relaxed text-[11px]">{testResult.message}</span>
               </div>
             </div>
           )}
@@ -742,16 +728,16 @@ export default function SettingsPage() {
           {/* Test Email Sent Status Feedback */}
           {testEmailResult && (
             <div
-              className={`p-3 text-xs rounded-lg border flex items-start gap-2 ${
+              className={`p-3 text-xs rounded-lg border flex items-start gap-2 font-mono ${
                 testEmailResult.success
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  : "bg-rose-50 border-rose-200 text-rose-800"
+                  ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
+                  : "bg-red-950/40 border-red-500/30 text-red-400"
               }`}
             >
               {testEmailResult.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               )}
               <span className="font-medium">{testEmailResult.message}</span>
             </div>
@@ -759,28 +745,28 @@ export default function SettingsPage() {
         </div>
 
         {/* Sender Identity & Defaults */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Mail className="w-4 h-4 text-slate-600" />
+        <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+          <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <Mail className="w-3.5 h-3.5" />
             Default Dispatcher Identity
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                 From Name
               </label>
               <input
                 type="text"
                 value={fromName}
                 onChange={(e) => setFromName(e.target.value)}
-                placeholder="e.g. Postvane Team"
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                placeholder="Postvane Team"
+                className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                 From Email Address
               </label>
               <input
@@ -788,13 +774,13 @@ export default function SettingsPage() {
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
                 placeholder="you@gmail.com"
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 font-mono"
+                className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[11px] font-mono text-zinc-400 mb-1">
               Default Reply-To (Optional)
             </label>
             <input
@@ -802,30 +788,30 @@ export default function SettingsPage() {
               value={replyTo}
               onChange={(e) => setReplyTo(e.target.value)}
               placeholder="replies@example.com"
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 font-mono"
+              className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none font-mono"
             />
           </div>
         </div>
 
         {/* Telemetry, Click & Open Tracking */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-slate-600" />
-            Real-Time Deliverability Telemetry
+        <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+          <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5" />
+            Engagement & Compliance
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-3 font-mono">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={trackOpens}
                 onChange={(e) => setTrackOpens(e.target.checked)}
-                className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                className="mt-0.5 rounded bg-[#171A1D] border-[#262A2E] text-white focus:ring-0"
               />
               <div>
-                <p className="text-xs font-semibold text-slate-900">Inject Invisible 1x1 Open Tracking Pixel</p>
-                <p className="text-[11px] text-slate-500">
-                  Tracks individual recipient open timestamps, device user agents, and IP locations.
+                <p className="text-xs text-white">Inject 1x1 Open Tracking Pixel</p>
+                <p className="text-[11px] text-zinc-500">
+                  Captures individual open timestamps and user agents.
                 </p>
               </div>
             </label>
@@ -835,12 +821,12 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={trackClicks}
                 onChange={(e) => setTrackClicks(e.target.checked)}
-                className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                className="mt-0.5 rounded bg-[#171A1D] border-[#262A2E] text-white focus:ring-0"
               />
               <div>
-                <p className="text-xs font-semibold text-slate-900">Enable High-Precision Click Tracking</p>
-                <p className="text-[11px] text-slate-500">
-                  Automatically rewrites hyperlinks to capture clicks and immediate redirect to destination URL.
+                <p className="text-xs text-white">Enable Click Tracking Proxy</p>
+                <p className="text-[11px] text-zinc-500">
+                  Rewrites links to log click timestamps before redirecting.
                 </p>
               </div>
             </label>
@@ -850,12 +836,12 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={autoAppendUnsubscribe}
                 onChange={(e) => setAutoAppendUnsubscribe(e.target.checked)}
-                className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                className="mt-0.5 rounded bg-[#171A1D] border-[#262A2E] text-white focus:ring-0"
               />
               <div>
-                <p className="text-xs font-semibold text-slate-900">Automated One-Click Unsubscribe Footer</p>
-                <p className="text-[11px] text-slate-500">
-                  Ensures full CAN-SPAM and GDPR compliance by automatically appending an unsubscribe link.
+                <p className="text-xs text-white">One-Click Unsubscribe Footer</p>
+                <p className="text-[11px] text-zinc-500">
+                  Appends RFC 8058 compliant unsubscribe link to outgoing campaign emails.
                 </p>
               </div>
             </label>
@@ -863,20 +849,20 @@ export default function SettingsPage() {
         </div>
 
         {/* Timezone Configuration */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-600" />
+        <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+          <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5" />
             Scheduling & Timezone
           </h2>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[11px] font-mono text-zinc-400 mb-1">
               Campaign Timezone
             </label>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
+              className="w-full sm:w-64 px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:outline-none font-mono"
             >
               <option value="UTC">UTC (Universal Time)</option>
               <option value="America/New_York">America/New_York (EST)</option>
@@ -892,10 +878,10 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-5 py-2 bg-white hover:bg-zinc-200 text-black rounded-lg text-xs font-medium shadow-sm transition-all disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            <span>{saving ? "Saving Configuration..." : "Save Settings"}</span>
+            <Save className="w-3.5 h-3.5" />
+            <span>{saving ? "Saving..." : "Save Configuration"}</span>
           </button>
         </div>
       </form>

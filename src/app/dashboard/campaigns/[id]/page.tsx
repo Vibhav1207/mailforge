@@ -15,13 +15,12 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Mail,
-  ShieldCheck,
-  Copy,
   RotateCcw,
-  ExternalLink,
   ChevronRight,
   Eye,
+  Activity,
+  Layers,
+  FileText,
 } from "lucide-react";
 
 export default function CampaignDetailPage() {
@@ -92,7 +91,6 @@ export default function CampaignDetailPage() {
       }
     };
 
-    // Kick off immediate step then pulse every 2 seconds
     runAutoStep();
     const interval = window.setInterval(runAutoStep, 2_000);
     return () => {
@@ -130,7 +128,6 @@ export default function CampaignDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Retry dispatch failed");
 
-      // Update local state
       setRecipients((prev) =>
         prev.map((r) => {
           if (r.status === "failed") {
@@ -141,7 +138,6 @@ export default function CampaignDetailPage() {
               error: undefined,
               sentAt: new Date().toISOString(),
             };
-
           }
           return r;
         })
@@ -184,18 +180,25 @@ export default function CampaignDetailPage() {
   };
 
   if (loading) {
-    return <div className="p-12 text-center text-xs text-slate-500">Loading campaign report...</div>;
+    return (
+      <div className="flex items-center justify-center py-24 text-xs font-mono text-zinc-500">
+        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+        LOADING CAMPAIGN TELEMETRY...
+      </div>
+    );
   }
 
   if (!campaign) {
     return (
-      <div className="p-12 text-center space-y-4">
-        <h2 className="text-base font-bold text-slate-900">Campaign Not Found</h2>
+      <div className="p-12 text-center space-y-4 bg-[#111315] border border-[#262A2E] rounded-xl max-w-md mx-auto my-12">
+        <AlertCircle className="w-8 h-8 text-zinc-500 mx-auto" />
+        <h2 className="text-base font-medium text-white">Campaign Not Found</h2>
+        <p className="text-xs text-zinc-400">The requested campaign ID does not exist or has been removed.</p>
         <Link
           href="/dashboard/campaigns"
-          className="inline-flex items-center gap-2 text-xs text-blue-600 hover:underline"
+          className="inline-flex items-center gap-2 text-xs text-white bg-[#171A1D] border border-[#262A2E] hover:border-zinc-500 px-3.5 py-1.5 rounded-lg transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Campaigns</span>
         </Link>
       </div>
@@ -206,33 +209,33 @@ export default function CampaignDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Navigation & Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-slate-500">
-        <Link href="/dashboard/campaigns" className="hover:text-slate-900">
+      {/* Top Breadcrumb */}
+      <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
+        <Link href="/dashboard/campaigns" className="hover:text-white transition-colors">
           Campaigns
         </Link>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span className="font-semibold text-slate-900 truncate max-w-sm">{campaign.name}</span>
+        <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />
+        <span className="text-zinc-200 truncate max-w-sm font-sans font-medium">{campaign.name}</span>
       </div>
 
       {/* Campaign Details Header Card */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-[#111315] p-6 rounded-xl border border-[#262A2E] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">{campaign.name}</h1>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <h1 className="text-xl font-medium tracking-tight text-white">{campaign.name}</h1>
             {["queued", "sending"].includes(campaign.status) ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-                Auto-Sending Active
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-950/40 text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                AUTO-SENDING ACTIVE
               </span>
             ) : (
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded border bg-slate-50 text-slate-700 border-slate-200">
+              <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded border border-[#262A2E] bg-[#171A1D] text-zinc-300">
                 {campaign.status.replace("_", " ")}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-600 font-mono mt-1">Subject: {campaign.subject}</p>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-zinc-400 font-mono">Subject: <span className="text-zinc-200">{campaign.subject}</span></p>
+          <p className="text-xs text-zinc-500 font-mono mt-1">
             Sender: "{campaign.fromName}" &lt;{campaign.fromEmail}&gt; · Created {formatDate(campaign.createdAt)}
           </p>
         </div>
@@ -242,17 +245,18 @@ export default function CampaignDetailPage() {
             <button
               onClick={handleResume}
               disabled={resuming}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-sm transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-50"
             >
-              <Send className={`w-3.5 h-3.5 ${resuming ? "animate-pulse" : ""}`} />
-              <span>{resuming ? "Resuming..." : "Resume"}</span>
+              <Send className={`w-3.5 h-3.5 ${resuming ? "animate-spin" : ""}`} />
+              <span>{resuming ? "Resuming..." : "Force Next Batch"}</span>
             </button>
           )}
+
           {failedRecipientsCount > 0 && (
             <button
               onClick={handleRetryFailed}
               disabled={retrying}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg shadow-sm transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 bg-amber-950/50 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors disabled:opacity-50"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${retrying ? "animate-spin" : ""}`} />
               <span>Retry {failedRecipientsCount} Failed</span>
@@ -261,7 +265,7 @@ export default function CampaignDetailPage() {
 
           <button
             onClick={loadCampaignData}
-            className="p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50"
+            className="p-2 text-zinc-400 hover:text-white bg-[#171A1D] border border-[#262A2E] hover:border-zinc-600 rounded-lg transition-colors"
             title="Refresh Report"
           >
             <RefreshCw className="w-4 h-4" />
@@ -270,91 +274,93 @@ export default function CampaignDetailPage() {
       </div>
 
       {/* KPI Stats Breakdown */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Total Recipients
           </span>
-          <p className="text-2xl font-bold text-slate-900 mt-1">
+          <p className="text-2xl font-mono font-medium text-white mt-1">
             {formatNumber(campaign.recipientCount || recipients.length)}
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Accepted / Sent
           </span>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
+          <p className="text-2xl font-mono font-medium text-white mt-1">
             {formatNumber(campaign.stats?.sent || 0)}
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Confirmed Delivered
           </span>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">
+          <p className="text-2xl font-mono font-medium text-emerald-400 mt-1">
             {formatNumber(campaign.stats?.delivered || campaign.stats?.sent || 0)}
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Opened Emails
           </span>
-          <p className="text-2xl font-bold text-indigo-600 mt-1">
+          <p className="text-2xl font-mono font-medium text-white mt-1">
             {formatNumber(campaign.stats?.opened || 0)}
           </p>
-          <span className="text-[11px] text-indigo-600 font-medium">
-            {campaign.stats?.sent ? ((Number(campaign.stats?.opened || 0) / campaign.stats.sent) * 100).toFixed(1) : "0"}% Open Rate
+          <span className="text-[10px] font-mono text-zinc-400">
+            {campaign.stats?.sent ? ((Number(campaign.stats?.opened || 0) / campaign.stats.sent) * 100).toFixed(1) : "0"}% rate
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Link Clicks
           </span>
-          <p className="text-2xl font-bold text-purple-600 mt-1">
+          <p className="text-2xl font-mono font-medium text-white mt-1">
             {formatNumber(campaign.stats?.clicked || 0)}
           </p>
-          <span className="text-[11px] text-purple-600 font-medium">
+          <span className="text-[10px] font-mono text-zinc-400">
             {campaign.stats?.sent ? ((Number(campaign.stats?.clicked || 0) / campaign.stats.sent) * 100).toFixed(1) : "0"}% CTR
           </span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="bg-[#111315] p-4 rounded-xl border border-[#262A2E]">
+          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
             Failed / Bounced
           </span>
-          <p className="text-2xl font-bold text-red-600 mt-1">
+          <p className="text-2xl font-mono font-medium text-red-400 mt-1">
             {formatNumber((campaign.stats?.failed || 0) + (campaign.stats?.bounced || 0))}
           </p>
         </div>
       </div>
 
       {/* Tabs: Recipient-Level Results vs HTML Email Content */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="border-b border-slate-200 px-6 py-3 flex items-center justify-between">
-          <div className="flex gap-4 text-xs font-semibold">
+      <div className="bg-[#111315] rounded-xl border border-[#262A2E] overflow-hidden">
+        <div className="border-b border-[#262A2E] px-6 py-3 flex items-center justify-between">
+          <div className="flex gap-6 text-xs font-medium">
             <button
               onClick={() => setActiveTab("results")}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 transition-colors flex items-center gap-1.5 ${
                 activeTab === "results"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  ? "border-white text-white"
+                  : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Recipient Audit Log ({recipients.length})
+              <Layers className="w-3.5 h-3.5" />
+              <span>Recipient Audit Log ({recipients.length})</span>
             </button>
             <button
               onClick={() => setActiveTab("content")}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 transition-colors flex items-center gap-1.5 ${
                 activeTab === "content"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
+                  ? "border-white text-white"
+                  : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Rendered Email Content
+              <FileText className="w-3.5 h-3.5" />
+              <span>Rendered Email Content</span>
             </button>
           </div>
         </div>
@@ -363,88 +369,103 @@ export default function CampaignDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Recipient</th>
-                  <th className="py-3 px-4">Delivery Status</th>
-                  <th className="py-3 px-4">Engagement (Opens/Clicks)</th>
-                  <th className="py-3 px-4">Provider Message ID</th>
-                  <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Diagnostics</th>
+                <tr className="bg-[#171A1D]/60 border-b border-[#262A2E] text-zinc-400 font-mono text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4 font-medium">Recipient</th>
+                  <th className="py-3 px-4 font-medium">Delivery Status</th>
+                  <th className="py-3 px-4 font-medium">Engagement</th>
+                  <th className="py-3 px-4 font-medium">Provider Message ID</th>
+                  <th className="py-3 px-4 font-medium">Timestamp</th>
+                  <th className="py-3 px-4 font-medium">Diagnostics</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recipients.map((r) => {
-                  const statusColors: Record<string, string> = {
-                    delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                    sent: "bg-blue-50 text-blue-700 border-blue-200",
-                    failed: "bg-red-50 text-red-700 border-red-200",
-                    bounced: "bg-amber-50 text-amber-700 border-amber-200",
-                  };
+              <tbody className="divide-y divide-[#1C2024]">
+                {recipients.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-zinc-500 font-mono text-xs">
+                      No recipients registered in this campaign
+                    </td>
+                  </tr>
+                ) : (
+                  recipients.map((r) => {
+                    const statusColors: Record<string, string> = {
+                      delivered: "border-emerald-500/30 bg-emerald-950/40 text-emerald-400",
+                      sent: "border-blue-500/30 bg-blue-950/40 text-blue-400",
+                      failed: "border-red-500/30 bg-red-950/40 text-red-400",
+                      bounced: "border-amber-500/30 bg-amber-950/40 text-amber-400",
+                      pending: "border-zinc-700 bg-zinc-800 text-zinc-400",
+                    };
 
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-900">
-                          {[r.firstName, r.lastName].filter(Boolean).join(" ") || "—"}
-                        </p>
-                        <p className="font-mono text-slate-500 text-[11px]">{r.email}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                            statusColors[r.status] || "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {r.openCount && r.openCount > 0 ? (
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold text-[10px]">
-                              Opened ({r.openCount}x)
+                    return (
+                      <tr key={r.id} className="hover:bg-[#171A1D]/40 transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-medium text-white">
+                            {[r.firstName, r.lastName].filter(Boolean).join(" ") || "—"}
+                          </p>
+                          <p className="font-mono text-zinc-400 text-[11px]">{r.email}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase border ${
+                              statusColors[r.status] || "border-zinc-700 bg-zinc-800 text-zinc-400"
+                            }`}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {r.openCount && r.openCount > 0 ? (
+                              <span className="px-1.5 py-0.5 rounded border border-[#262A2E] bg-[#171A1D] text-white font-mono text-[10px]">
+                                Opened ({r.openCount}x)
+                              </span>
+                            ) : (
+                              <span className="text-zinc-600 font-mono text-[11px]">Unopened</span>
+                            )}
+                            {r.clickCount && r.clickCount > 0 ? (
+                              <span className="px-1.5 py-0.5 rounded border border-purple-500/30 bg-purple-950/40 text-purple-300 font-mono text-[10px]">
+                                Clicked ({r.clickCount}x)
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[11px] text-zinc-400">
+                          {r.providerMessageId ? (
+                            <span className="truncate max-w-[200px] block" title={r.providerMessageId}>
+                              {r.providerMessageId}
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-[11px]">Unopened</span>
+                            "—"
                           )}
-                          {r.clickCount && r.clickCount > 0 ? (
-                            <span className="px-1.5 py-0.5 rounded bg-purple-50 border border-purple-200 text-purple-700 font-semibold text-[10px]">
-                              Clicked ({r.clickCount}x)
+                        </td>
+                        <td className="py-3 px-4 text-zinc-400 font-mono text-[11px]">
+                          {formatDate(r.deliveredAt || r.sentAt)}
+                        </td>
+                        <td className="py-3 px-4 text-xs">
+                          {r.error ? (
+                            <span className="text-red-400 text-[11px] flex items-center gap-1 font-mono">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate max-w-xs" title={r.error}>{r.error}</span>
                             </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                        {r.providerMessageId || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-slate-500">
-                        {formatDate(r.deliveredAt || r.sentAt)}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">
-                        {r.error ? (
-                          <span className="text-red-600 text-[11px] flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>{r.error}</span>
-                          </span>
-                        ) : (
-                          <span className="text-emerald-600 text-[11px] flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                            <span>Provider accepted</span>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                          ) : (
+                            <span className="text-emerald-400 text-[11px] flex items-center gap-1 font-mono">
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>Accepted by MTA</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="p-6 bg-slate-50">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 max-w-2xl mx-auto shadow-sm">
+          <div className="p-6 bg-[#08090A]">
+            <div className="bg-white text-slate-900 p-8 rounded-xl border border-zinc-700 max-w-2xl mx-auto shadow-2xl">
               <div
                 dangerouslySetInnerHTML={{ __html: campaign.htmlContent }}
-                className="font-sans"
+                className="font-sans leading-relaxed text-sm"
               />
             </div>
           </div>

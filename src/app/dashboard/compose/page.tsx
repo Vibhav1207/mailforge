@@ -73,7 +73,7 @@ export default function ComposeEmailPage() {
   const userId = user?.uid || profile?.uid || "";
 
   // Composer Form State
-  const [campaignName, setCampaignName] = useState("Product Announcement " + new Date().toLocaleDateString());
+  const [campaignName, setCampaignName] = useState("Campaign " + new Date().toLocaleDateString());
   const [subject, setSubject] = useState("");
   const [fromName, setFromName] = useState(profile?.settings?.defaultFromName || "Postvane Team");
   const [fromEmail, setFromEmail] = useState(
@@ -114,67 +114,20 @@ export default function ComposeEmailPage() {
   const [availableTemplates, setAvailableTemplates] = useState<EmailTemplate[]>([]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
+  // Attachments State (PDFs & Documents)
+  const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
   // Preview & Test State
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewRecipientIndex, setPreviewRecipientIndex] = useState(0);
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Attachments State (PDF & Documents)
-  const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-
-  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setAttachmentError(null);
-
-    if (attachments.length + files.length > 5) {
-      setAttachmentError("You can attach up to 5 files per email.");
-      e.target.value = "";
-      return;
-    }
-
-    for (const file of files) {
-      if (file.size > 4 * 1024 * 1024) {
-        setAttachmentError(`File "${file.name}" is too large (max 4 MB per attachment).`);
-        e.target.value = "";
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.includes(",") ? result.split(",")[1] : result;
-        setAttachments((prev) => [
-          ...prev,
-          {
-            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            filename: file.name,
-            contentType: file.type || "application/octet-stream",
-            size: file.size,
-            contentBase64: base64,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    }
-    e.target.value = "";
-  };
-
-  const removeAttachment = (idOrIndex: string | number) => {
-    setAttachments((prev) => prev.filter((a, idx) => a.id !== idOrIndex && idx !== idOrIndex));
-  };
-
-  // Auto-Save Draft State
-  const [draftId, setDraftId] = useState<string>(`draft_${Date.now()}`);
-  const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [savingDraft, setSavingDraft] = useState(false);
-
-  // Sending & Scheduling Controls
+  // Confirm Dispatch & Scheduling Modal
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDateTime, setScheduleDateTime] = useState("");
-  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendProgress, setSendProgress] = useState<{
     sent: number;
@@ -183,227 +136,212 @@ export default function ComposeEmailPage() {
     statusText: string;
   } | null>(null);
 
+  // Draft Auto-saving State
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Load saved contacts and templates on mount
+  // Load Contacts and Templates on mount
   useEffect(() => {
     if (!userId) return;
-    async function loadData() {
+    const fetchData = async () => {
       try {
-        const [cnts, tmpls] = await Promise.all([
+        const [contacts, tmpls] = await Promise.all([
           getContacts(userId),
           getTemplates(userId),
         ]);
-        setSavedContacts(cnts);
+        setSavedContacts(contacts.filter((c) => c.status === "active"));
         setAvailableTemplates(tmpls);
-
-        // Load requested or default template if empty
-        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-        const requestedTmplId = urlParams?.get("templateId");
-        const initialTmpl = requestedTmplId
-          ? tmpls.find((t) => t.id === requestedTmplId) || tmpls[0]
-          : (tmpls.length > 0 ? tmpls[0] : null);
-
-        if (initialTmpl && !htmlContent) {
-          setSubject(initialTmpl.subject);
-          setHtmlContent(initialTmpl.htmlContent);
-          setTextContent(initialTmpl.textContent || "");
-          if (initialTmpl.attachments && initialTmpl.attachments.length > 0) {
-            setAttachments(initialTmpl.attachments);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load initial composer data:", err);
+      } catch (e) {
+        console.error("Load initial composer data error:", e);
       }
-    }
-    loadData();
+    };
+    fetchData();
   }, [userId]);
 
-  // Update profile default sender values if changed
+  // Synchronize visual editor contents
   useEffect(() => {
-    if (profile?.settings) {
-      if (profile.settings.defaultFromName && fromName === "Postvane Team") {
-        setFromName(profile.settings.defaultFromName);
-      }
-      if (profile.settings.defaultFromEmail && (!fromEmail || fromEmail === "noreply@postvane.app" || fromEmail === "noreply@mailforge.app" || fromEmail === "onboarding@resend.dev")) {
-        setFromEmail(profile.settings.defaultFromEmail);
-      } else if (!fromEmail && (profile.settings.gmail?.email || profile.settings.smtp?.user)) {
-        setFromEmail(profile.settings.gmail?.email || profile.settings.smtp?.user || "");
-      }
-      if (profile.settings.trackOpens !== undefined) {
-        setTrackOpens(profile.settings.trackOpens);
-      }
-      if (profile.settings.trackClicks !== undefined) {
-        setTrackClicks(profile.settings.trackClicks);
-      }
+    if (editorRef.current && editorMode === "visual" && editorRef.current.innerHTML !== htmlContent) {
+      editorRef.current.innerHTML = htmlContent;
     }
-  }, [profile]);
+  }, [htmlContent, editorMode]);
 
-  // Sync editor innerHTML when in visual mode
-  useEffect(() => {
-    if (editorMode === "visual" && editorRef.current) {
-      if (editorRef.current.innerHTML !== htmlContent) {
-        editorRef.current.innerHTML = htmlContent;
-      }
-    }
-  }, [editorMode]);
-
-  // Auto-save draft debounce
-  useEffect(() => {
-    if (!subject && !htmlContent) return;
-    const timer = setTimeout(async () => {
-      await autoSaveDraft();
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [subject, htmlContent, fromName, fromEmail, recipients, campaignName, attachments]);
-
-  const autoSaveDraft = async () => {
-    try {
-      setSavingDraft(true);
-      const draftCampaign: Campaign = {
-        id: draftId,
-        userId,
-        name: campaignName,
-        subject: subject || "Untitled Draft",
-        fromName,
-        fromEmail,
-        replyTo,
-        htmlContent,
-        textContent: textContent || htmlToPlainText(htmlContent),
-        attachments: attachments.length ? attachments : undefined,
-        recipientCount: recipients.length,
-        status: "draft",
-        stats: { total: recipients.length, sent: 0, delivered: 0, bounced: 0, failed: 0, unsubscribed: 0 },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      await saveCampaign(draftCampaign);
-      setLastSaved(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-    } catch (err) {
-      console.warn("Draft auto-save warning:", err);
-    } finally {
-      setSavingDraft(false);
-    }
-  };
-
-  // Process raw pasted emails
+  // Parse pasted raw emails
   const handleParsePastedEmails = () => {
     if (!rawPasteEmails.trim()) return;
     const parsed = parseEmailList(rawPasteEmails);
-    const newItems: RecipientItem[] = parsed.valid.map((email) => ({
-      id: `rcp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      email,
-      firstName: "",
-      lastName: "",
-      company: "",
-      selected: true,
-    }));
+    const existing = new Set(recipients.map((r) => r.email.toLowerCase()));
 
-    // Deduplicate against existing list
-    const existingEmails = new Set(recipients.map((r) => r.email));
-    const merged = [...recipients];
-    let addedDupes = 0;
+    const nextItems: RecipientItem[] = [];
+    let dupes = 0;
 
-    for (const item of newItems) {
-      if (!existingEmails.has(item.email)) {
-        existingEmails.add(item.email);
-        merged.push(item);
+    for (const validEmail of parsed.valid) {
+      const emailLower = validEmail.toLowerCase();
+      if (existing.has(emailLower)) {
+        dupes++;
       } else {
-        addedDupes++;
+        existing.add(emailLower);
+        nextItems.push({
+          id: `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          email: validEmail,
+          selected: true,
+        });
       }
     }
 
-    setRecipients(merged);
+    setDuplicateCount((prev) => prev + dupes);
     setInvalidAddresses(parsed.invalid);
-    setDuplicateCount(parsed.duplicates + addedDupes);
+    setRecipients((prev) => [...prev, ...nextItems]);
     setRawPasteEmails("");
   };
 
-  // Handle Excel (.xlsx, .xls) and CSV (.csv, .tsv) file upload
+  // Parse uploaded spreadsheet (.xlsx, .xls, .csv)
   const handleSpreadsheetUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsParsingSpreadsheet(true);
     setSpreadsheetError(null);
+    setUploadedFileName(file.name);
 
     try {
-      const parsed = await parseSpreadsheetFile(file);
-      setUploadedFileName(file.name);
-      setDetectedColumns(parsed.detection);
+      const result = await parseSpreadsheetFile(file);
+      setDetectedColumns(result.detection);
+      setDiscoveredCustomFields(result.detection.customColumns);
 
       const existingEmails = new Set(recipients.map((r) => r.email.toLowerCase()));
-      const validList: RecipientItem[] = [];
-      let extraDupes = 0;
+      const validItems: RecipientItem[] = [];
+      let duplicates = result.duplicateCount || 0;
 
-      for (const item of parsed.recipients) {
-        if (!existingEmails.has(item.email.toLowerCase())) {
-          existingEmails.add(item.email.toLowerCase());
-          validList.push(item);
+      for (const item of result.recipients) {
+        const lower = item.email.toLowerCase();
+        if (existingEmails.has(lower)) {
+          duplicates++;
         } else {
-          extraDupes++;
+          existingEmails.add(lower);
+          validItems.push({
+            id: item.id || `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            email: item.email,
+            firstName: item.firstName,
+            lastName: item.lastName,
+            name: item.name,
+            company: item.company,
+            customFields: item.customFields,
+            selected: true,
+          });
         }
       }
 
-      setRecipients([...recipients, ...validList]);
-      setInvalidAddresses([...invalidAddresses, ...parsed.invalidEmails]);
-      setDuplicateCount(duplicateCount + parsed.duplicateCount + extraDupes);
-
-      if (parsed.detection.customColumns.length > 0) {
-        const uniqueCols = Array.from(new Set([...discoveredCustomFields, ...parsed.detection.customColumns]));
-        setDiscoveredCustomFields(uniqueCols);
-      }
+      setRecipients((prev) => [...prev, ...validItems]);
+      setInvalidAddresses(result.invalidEmails || []);
+      setDuplicateCount((prev) => prev + duplicates);
     } catch (err: any) {
-      console.error("Spreadsheet Parse error:", err);
-      setSpreadsheetError(err.message || "Failed to parse spreadsheet file");
+      setSpreadsheetError(err.message || "Failed to parse file");
     } finally {
       setIsParsingSpreadsheet(false);
       e.target.value = "";
     }
   };
 
-  // Add selected saved contacts
+  // Add saved contacts selected from library
   const handleAddSelectedSavedContacts = () => {
-    const selected = savedContacts.filter((c) => selectedContactIds.has(c.id) && c.status === "active");
-    const existingEmails = new Set(recipients.map((r) => r.email));
-    const merged = [...recipients];
+    const existingEmails = new Set(recipients.map((r) => r.email.toLowerCase()));
+    const itemsToAdd: RecipientItem[] = [];
     let dupes = 0;
 
-    for (const c of selected) {
-      if (!existingEmails.has(c.email)) {
-        existingEmails.add(c.email);
-        merged.push({
-          id: c.id,
-          email: c.email,
-          firstName: c.firstName,
-          lastName: c.lastName,
-          company: c.company,
-          customFields: c.customFields,
-          selected: true,
-        });
-      } else {
-        dupes++;
+    for (const c of savedContacts) {
+      if (selectedContactIds.has(c.id)) {
+        const lower = c.email.toLowerCase();
+        if (existingEmails.has(lower)) {
+          dupes++;
+        } else {
+          existingEmails.add(lower);
+          itemsToAdd.push({
+            id: `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            email: c.email,
+            firstName: c.firstName,
+            lastName: c.lastName,
+            company: c.company,
+            customFields: c.customFields,
+            selected: true,
+          });
+        }
       }
     }
 
-    setRecipients(merged);
-    setDuplicateCount(dupes);
+    setDuplicateCount((prev) => prev + dupes);
+    setRecipients((prev) => [...prev, ...itemsToAdd]);
     setSelectedContactIds(new Set());
   };
 
-  // Remove recipient
+  // Attachment handler for PDF & Documents
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setAttachmentError(null);
+
+    const maxFileSize = 4 * 1024 * 1024; // 4MB
+    const maxAttachments = 5;
+
+    if (attachments.length + files.length > maxAttachments) {
+      setAttachmentError(`Maximum ${maxAttachments} attachments allowed per campaign.`);
+      return;
+    }
+
+    const newAttachments: EmailAttachment[] = [];
+    let filesProcessed = 0;
+    const filesToProcess = Array.from(files);
+
+    filesToProcess.forEach((file) => {
+      if (file.size > maxFileSize) {
+        setAttachmentError(`File "${file.name}" exceeds the 4MB limit.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          const base64Data = result.split(",")[1];
+          newAttachments.push({
+            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            contentBase64: base64Data,
+            size: file.size,
+          });
+        }
+        filesProcessed++;
+        if (filesProcessed === filesToProcess.length) {
+          setAttachments((prev) => [...prev, ...newAttachments]);
+        }
+      };
+      reader.onerror = () => {
+        setAttachmentError(`Failed to read file "${file.name}".`);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = "";
+  };
+
+  const removeAttachment = (idOrIndex: string | number) => {
+    setAttachments((prev) =>
+      prev.filter((item, idx) => (typeof idOrIndex === "string" ? item.id !== idOrIndex : idx !== idOrIndex))
+    );
+  };
+
   const handleRemoveRecipient = (id: string) => {
     setRecipients(recipients.filter((r) => r.id !== id));
   };
 
-  // Toggle recipient selection
   const handleToggleRecipient = (id: string) => {
     setRecipients(
       recipients.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r))
     );
   };
 
-  // Insert personalization variable
   const insertVariable = (variable: string) => {
     const token = `{{${variable}}}`;
     if (editorMode === "visual" && editorRef.current) {
@@ -415,7 +353,6 @@ export default function ComposeEmailPage() {
     }
   };
 
-  // Format action in visual editor
   const formatDoc = (cmd: string, val: string | undefined = undefined) => {
     if (editorMode === "visual" && editorRef.current) {
       editorRef.current.focus();
@@ -424,7 +361,6 @@ export default function ComposeEmailPage() {
     }
   };
 
-  // Send preview test email to current user
   const handleSendTestEmail = async () => {
     setSendingTest(true);
     setTestResult(null);
@@ -474,10 +410,8 @@ export default function ComposeEmailPage() {
     }
   };
 
-  // Active chosen recipients (only those checked)
   const activeSelectedRecipients = recipients.filter((r) => r.selected !== false);
 
-  // Dispatch campaign immediately or schedule
   const handleExecuteSend = async () => {
     if (activeSelectedRecipients.length === 0) return;
     setConfirmSendOpen(false);
@@ -491,7 +425,6 @@ export default function ComposeEmailPage() {
 
     const campaignId = `cmp_${Date.now()}`;
 
-    // If scheduled for future
     if (scheduleMode && scheduleDateTime) {
       const scheduledCampaign: Campaign = {
         id: campaignId,
@@ -523,87 +456,79 @@ export default function ComposeEmailPage() {
 
       await saveCampaign(scheduledCampaign);
       setIsProcessing(false);
-      router.push(`/dashboard/campaigns/${campaignId}`);
+      router.push(`/dashboard/campaigns`);
       return;
     }
 
     try {
-      const res = await apiFetch("/api/campaigns/send", {
+      const initialCampaign: Campaign = {
+        id: campaignId,
+        userId,
+        name: campaignName,
+        subject,
+        fromName,
+        fromEmail,
+        replyTo,
+        htmlContent,
+        textContent: textContent || htmlToPlainText(htmlContent),
+        attachments: attachments.length ? attachments : undefined,
+        recipientCount: activeSelectedRecipients.length,
+        status: "sending",
+        stats: {
+          total: activeSelectedRecipients.length,
+          sent: 0,
+          delivered: 0,
+          bounced: 0,
+          failed: 0,
+          unsubscribed: 0,
+          opened: 0,
+          clicked: 0,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveCampaign(initialCampaign);
+
+      const res = await apiFetch("/api/campaigns/send-bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          campaignId,
-          name: campaignName,
-          subject,
-          htmlContent,
-          textContent: textContent || htmlToPlainText(htmlContent),
-          fromName,
-          fromEmail,
-          replyTo,
-          recipients: activeSelectedRecipients.map((r, idx) => ({
-            id: (r.id || `rcp_${idx}`).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 120),
-            email: r.email.trim().toLowerCase(),
-            name: r.name || [r.firstName, r.lastName].filter(Boolean).join(" ") || undefined,
-            firstName: r.firstName?.trim() || undefined,
-            lastName: r.lastName?.trim() || undefined,
-            company: r.company?.trim() || undefined,
-            customFields: r.customFields && typeof r.customFields === "object" ? r.customFields : undefined,
+          campaign: initialCampaign,
+          recipients: activeSelectedRecipients.map((r) => ({
+            id: r.id,
+            email: r.email,
+            firstName: r.firstName,
+            lastName: r.lastName,
+            name: r.name,
+            company: r.company,
+            customFields: r.customFields,
           })),
-          idempotencyKey: `idemp_${campaignId}`,
           trackOpens,
           trackClicks,
-          attachments: attachments.length ? attachments : undefined,
-          smtpConfig: profile?.settings?.smtp?.pass
-            ? profile.settings.smtp
-            : profile?.settings?.gmail?.appPassword
-            ? {
-                host: "smtp.gmail.com",
-                port: 465,
-                secure: true,
-                user: profile.settings.gmail.email,
-                pass: profile.settings.gmail.appPassword,
-              }
-            : undefined,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to process campaign");
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to process campaign");
 
-      setSendProgress({
-        sent: data.stats?.sent || 0,
-        failed: data.stats?.failed || 0,
-        total: activeSelectedRecipients.length,
-        statusText: data.finished
-          ? "Campaign delivered successfully!"
-          : "Delivery active. Delivering messages with automatic continuous resume...",
-      });
-
-      setTimeout(() => {
-        setIsProcessing(false);
-        router.push(`/dashboard/campaigns/${campaignId}`);
-      }, 1200);
+      setIsProcessing(false);
+      router.push(`/dashboard/campaigns/${campaignId}`);
     } catch (err: any) {
-      console.error("Execution send error:", err);
-      alert(err.message || "Failed to deliver campaign");
+      alert(err.message || "Failed to dispatch campaign");
       setIsProcessing(false);
     }
   };
 
-  // Preview interpolation recipient
   const previewTarget = activeSelectedRecipients[previewRecipientIndex] || {
-    id: "sample_target",
-    email: user?.email || profile?.email || "recipient@example.com",
-    name: user?.displayName || "John Doe",
-    firstName: user?.displayName?.split(" ")[0] || "John",
-    lastName: user?.displayName?.split(" ")[1] || "Doe",
-    company: "Acme Corp",
-    customFields: {},
+    email: "sarah.connor@cyberdyne.io",
+    firstName: "Sarah",
+    lastName: "Connor",
+    name: "Sarah Connor",
+    company: "Cyberdyne Systems",
   };
 
-  const previewSubject = interpolateVariables(subject, {
+  const previewHtml = interpolateVariables(htmlContent, {
     ...previewTarget.customFields,
     name: previewTarget.name || [previewTarget.firstName, previewTarget.lastName].filter(Boolean).join(" "),
     firstName: previewTarget.firstName,
@@ -611,9 +536,10 @@ export default function ComposeEmailPage() {
     company: previewTarget.company,
     email: previewTarget.email,
     fromName,
+    unsubscribeUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/unsubscribe`,
   });
 
-  const previewHtml = interpolateVariables(htmlContent, {
+  const previewSubject = interpolateVariables(subject, {
     ...previewTarget.customFields,
     name: previewTarget.name || [previewTarget.firstName, previewTarget.lastName].filter(Boolean).join(" "),
     firstName: previewTarget.firstName,
@@ -627,16 +553,16 @@ export default function ComposeEmailPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Campaign Name Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#262A2E] pb-5">
         <div className="flex-1 max-w-xl">
           <input
             type="text"
             value={campaignName}
             onChange={(e) => setCampaignName(e.target.value)}
-            className="text-2xl font-bold tracking-tight text-slate-900 bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:ring-0 px-0 py-1 w-full"
+            className="text-2xl font-medium tracking-tight text-white bg-transparent border-0 border-b border-transparent hover:border-[#262A2E] focus:border-white focus:ring-0 px-0 py-1 w-full transition-colors font-sans"
             placeholder="Campaign Name"
           />
-          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+          <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500 font-mono">
             <span className="flex items-center gap-1">
               <Save className="w-3.5 h-3.5" />
               {savingDraft
@@ -646,34 +572,34 @@ export default function ComposeEmailPage() {
                 : "Auto-save active"}
             </span>
             <span>•</span>
-            <span>{activeSelectedRecipients.length} recipients selected</span>
+            <span className="text-zinc-400">{activeSelectedRecipients.length} recipients staged</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
           >
-            <Eye className="w-4 h-4 text-slate-500" />
+            <Eye className="w-3.5 h-3.5 text-zinc-400" />
             <span>Preview</span>
           </button>
 
           <button
             onClick={handleSendTestEmail}
             disabled={sendingTest || !subject || !htmlContent}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
           >
-            <Mail className="w-4 h-4 text-slate-500" />
-            <span>{sendingTest ? "Sending Test..." : "Send Test to Me"}</span>
+            <Mail className="w-3.5 h-3.5 text-zinc-400" />
+            <span>{sendingTest ? "Sending..." : "Send Test"}</span>
           </button>
 
           <button
             onClick={() => setConfirmSendOpen(true)}
             disabled={activeSelectedRecipients.length === 0 || !subject.trim() || !htmlContent.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-40 shadow-sm"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
             <span>Review & Send</span>
           </button>
         </div>
@@ -681,17 +607,17 @@ export default function ComposeEmailPage() {
 
       {testResult && (
         <div
-          className={`p-3 rounded-lg text-xs flex items-center justify-between ${
+          className={`p-3 rounded-lg text-xs flex items-center justify-between border ${
             testResult.success
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-              : "bg-red-50 border border-red-200 text-red-800"
+              ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400 font-mono"
+              : "bg-red-950/40 border-red-500/30 text-red-400 font-mono"
           }`}
         >
           <div className="flex items-center gap-2">
             {testResult.success ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-red-600" />
+              <AlertCircle className="w-4 h-4 text-red-400" />
             )}
             <span>{testResult.message}</span>
           </div>
@@ -702,98 +628,98 @@ export default function ComposeEmailPage() {
       )}
 
       {/* Grid: Left Column (Sender & Recipients), Right Column (Content Editor) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT COLUMN: Sender & Recipients Management */}
         <div className="lg:col-span-5 space-y-6">
           {/* Sender Identity Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center justify-between">
-              <span>Sender Identity</span>
-              <span className="text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+          <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400">Sender Identity</h2>
+              <span className="text-[10px] font-mono text-zinc-400 bg-[#171A1D] px-2 py-0.5 rounded border border-[#262A2E]">
                 {profile?.settings?.deliveryMethod === "gmail_app_password" || profile?.settings?.gmail?.email
-                  ? "Gmail App Password"
-                  : "SMTP Dispatcher"}
+                  ? "GMAIL APP PASSWORD"
+                  : "SMTP DISPATCHER"}
               </span>
-            </h2>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   From Name
                 </label>
                 <input
                   type="text"
                   value={fromName}
                   onChange={(e) => setFromName(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                   placeholder="e.g. Postvane Team"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                   From Email
                 </label>
                 <input
                   type="email"
                   value={fromEmail}
                   onChange={(e) => setFromEmail(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
                   placeholder="you@gmail.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                 Reply-To Address (Optional)
               </label>
               <input
                 type="email"
                 value={replyTo}
                 onChange={(e) => setReplyTo(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white font-mono rounded-lg focus:border-zinc-500 focus:outline-none"
                 placeholder="replies@example.com"
               />
             </div>
 
             {/* Engagement Tracking & Engine Indicator */}
-            <div className="pt-3 border-t border-slate-100 space-y-2">
+            <div className="pt-3 border-t border-[#1C2024] space-y-2.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Server className="w-3.5 h-3.5 text-blue-600" />
-                  Sending Engine:
+                <span className="text-zinc-400 font-mono text-[11px] flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-zinc-400" />
+                  Delivery Transport:
                 </span>
-                <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
-                  {profile?.settings?.smtp?.host ? `Custom SMTP (${profile.settings.smtp.host}) · Unlimited` : "Self-Hosted SMTP · Unlimited Daily Sending"}
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-emerald-400" />
+                  {profile?.settings?.smtp?.host ? `SMTP (${profile.settings.smtp.host})` : "Direct SMTP Relay"}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors">
+                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] transition-colors">
                   <input
                     type="checkbox"
                     checked={trackOpens}
                     onChange={(e) => setTrackOpens(e.target.checked)}
-                    className="rounded text-blue-600"
+                    className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                   />
                   <div className="flex items-center gap-1.5">
-                    <Eye className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="font-medium text-slate-800 text-[11px]">Track Email Opens (Pixel)</span>
+                    <Eye className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="text-zinc-300 font-mono text-[11px]">Track Opens (Pixel)</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors">
+                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-[#171A1D] hover:bg-[#1D2125] border border-[#262A2E] transition-colors">
                   <input
                     type="checkbox"
                     checked={trackClicks}
                     onChange={(e) => setTrackClicks(e.target.checked)}
-                    className="rounded text-blue-600"
+                    className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                   />
                   <div className="flex items-center gap-1.5">
-                    <MousePointerClick className="w-3.5 h-3.5 text-indigo-600" />
-                    <span className="font-medium text-slate-800 text-[11px]">Track Link Clicks (Proxy)</span>
+                    <MousePointerClick className="w-3.5 h-3.5 text-zinc-400" />
+                    <span className="text-zinc-300 font-mono text-[11px]">Track Clicks (Proxy)</span>
                   </div>
                 </label>
               </div>
@@ -801,19 +727,19 @@ export default function ComposeEmailPage() {
           </div>
 
           {/* Recipients Ingestion Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Recipient Management</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {recipients.length} total · {activeSelectedRecipients.length} selected
+                <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400">Recipient Management</h2>
+                <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                  {recipients.length} staged · {activeSelectedRecipients.length} active
                 </p>
               </div>
 
               {recipients.length > 0 && (
                 <button
                   onClick={() => setRecipients([])}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                  className="text-xs text-red-400 hover:text-red-300 font-mono"
                 >
                   Clear all
                 </button>
@@ -821,13 +747,13 @@ export default function ComposeEmailPage() {
             </div>
 
             {/* Input Method Switcher */}
-            <div className="flex border-b border-slate-200 text-xs font-medium">
+            <div className="flex border-b border-[#262A2E] text-xs font-mono">
               <button
                 onClick={() => setRecipientTab("paste")}
                 className={`pb-2.5 px-3 border-b-2 transition-colors ${
                   recipientTab === "paste"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
+                    ? "border-white text-white font-medium"
+                    : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 Paste / Manual
@@ -836,8 +762,8 @@ export default function ComposeEmailPage() {
                 onClick={() => setRecipientTab("csv")}
                 className={`pb-2.5 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
                   recipientTab === "csv"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
+                    ? "border-white text-white font-medium"
+                    : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -847,11 +773,11 @@ export default function ComposeEmailPage() {
                 onClick={() => setRecipientTab("contacts")}
                 className={`pb-2.5 px-3 border-b-2 transition-colors ${
                   recipientTab === "contacts"
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
+                    ? "border-white text-white font-medium"
+                    : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                Saved Contacts ({savedContacts.length})
+                Contacts ({savedContacts.length})
               </button>
             </div>
 
@@ -862,15 +788,13 @@ export default function ComposeEmailPage() {
                   rows={4}
                   value={rawPasteEmails}
                   onChange={(e) => setRawPasteEmails(e.target.value)}
-                  placeholder="Paste emails separated by commas, spaces, or new lines...
-alex@apextech.io, sarah@innovate.co
-david@cloudscale.net"
-                  className="w-full p-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  placeholder="Paste emails separated by commas, spaces, or new lines...&#10;alex@apextech.io, sarah@innovate.co&#10;david@cloudscale.net"
+                  className="w-full p-2.5 text-xs font-mono bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
                 />
                 <button
                   onClick={handleParsePastedEmails}
                   disabled={!rawPasteEmails.trim()}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                  className="w-full py-2 bg-white hover:bg-zinc-200 text-black text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
                 >
                   Parse & Add Emails
                 </button>
@@ -880,19 +804,19 @@ david@cloudscale.net"
             {/* Tab 2: Upload Excel / CSV */}
             {recipientTab === "csv" && (
               <div className="space-y-4">
-                <label className="border-2 border-dashed border-blue-200 hover:border-blue-500 bg-blue-50/20 hover:bg-blue-50/50 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all text-center group">
-                  <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <label className="border border-dashed border-[#262A2E] hover:border-zinc-500 bg-[#171A1D]/40 hover:bg-[#171A1D] rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all text-center group">
+                  <div className="w-10 h-10 rounded-full bg-[#111315] border border-[#262A2E] flex items-center justify-center mb-2.5 text-zinc-400 group-hover:text-white transition-colors">
                     {isParsingSpreadsheet ? (
-                      <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
                     ) : (
-                      <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                      <FileSpreadsheet className="w-4 h-4" />
                     )}
                   </div>
-                  <span className="text-xs font-semibold text-slate-900">
-                    {isParsingSpreadsheet ? "Analyzing spreadsheet & columns..." : "Click or drag Excel or CSV file here"}
+                  <span className="text-xs font-medium text-white">
+                    {isParsingSpreadsheet ? "Analyzing columns..." : "Click to upload Excel (.xlsx) or CSV"}
                   </span>
-                  <span className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                    Supports <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.csv</strong>. Automatically maps email, name, company, and all custom fields.
+                  <span className="text-[11px] text-zinc-500 mt-1 max-w-xs font-mono">
+                    Auto-detects emails, names, companies, and custom fields
                   </span>
                   <input
                     type="file"
@@ -904,49 +828,45 @@ david@cloudscale.net"
                 </label>
 
                 {spreadsheetError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-lg text-xs text-red-400 flex items-center gap-2 font-mono">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{spreadsheetError}</span>
                   </div>
                 )}
 
                 {uploadedFileName && detectedColumns && (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2.5">
+                  <div className="p-3.5 bg-[#171A1D] border border-[#262A2E] rounded-xl text-xs space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-semibold text-slate-900">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                      <div className="flex items-center gap-2 text-white font-medium">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                         <span className="truncate max-w-[200px]">{uploadedFileName}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/50 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                         <CheckCheck className="w-3 h-3" /> Auto-Mapped
                       </span>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="pt-2 border-t border-[#262A2E] grid grid-cols-2 gap-2 text-[11px] font-mono">
                       <div>
-                        <span className="text-slate-500">Email Field: </span>
-                        <span className="font-mono font-medium text-blue-700">
-                          {detectedColumns.emailColumn || "Auto-detected"}
-                        </span>
+                        <span className="text-zinc-500">Email: </span>
+                        <span className="text-zinc-200">{detectedColumns.emailColumn || "Detected"}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">Name Field: </span>
-                        <span className="font-mono font-medium text-slate-800">
-                          {detectedColumns.nameColumn || detectedColumns.firstNameColumn || "Not specified"}
-                        </span>
+                        <span className="text-zinc-500">Name: </span>
+                        <span className="text-zinc-200">{detectedColumns.nameColumn || detectedColumns.firstNameColumn || "Not specified"}</span>
                       </div>
                     </div>
 
                     {detectedColumns.customColumns.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200">
-                        <span className="text-slate-500 block text-[11px] mb-1">
-                          Available variables from your file:
+                      <div className="pt-2 border-t border-[#262A2E]">
+                        <span className="text-zinc-500 block text-[11px] font-mono mb-1">
+                          Mapped Variables:
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {detectedColumns.customColumns.map((col) => (
                             <span
                               key={col}
-                              className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-mono text-[10px]"
+                              className="px-1.5 py-0.5 rounded bg-[#111315] border border-[#262A2E] text-zinc-300 font-mono text-[10px]"
                             >
                               {col}
                             </span>
@@ -962,10 +882,10 @@ david@cloudscale.net"
             {/* Tab 3: Select from Saved Contacts */}
             {recipientTab === "contacts" && (
               <div className="space-y-3">
-                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 text-xs">
+                <div className="max-h-48 overflow-y-auto border border-[#262A2E] rounded-lg divide-y divide-[#1C2024] text-xs">
                   {savedContacts.length === 0 ? (
-                    <div className="p-4 text-center text-slate-500">
-                      No saved contacts available.
+                    <div className="p-4 text-center text-zinc-500 font-mono">
+                      No saved contacts available
                     </div>
                   ) : (
                     savedContacts.map((c) => {
@@ -973,8 +893,8 @@ david@cloudscale.net"
                       return (
                         <label
                           key={c.id}
-                          className={`flex items-center gap-2 p-2.5 hover:bg-slate-50 cursor-pointer ${
-                            c.status !== "active" ? "opacity-50 bg-slate-50/50" : ""
+                          className={`flex items-center gap-2 p-2.5 hover:bg-[#171A1D] cursor-pointer ${
+                            c.status !== "active" ? "opacity-50" : ""
                           }`}
                         >
                           <input
@@ -987,19 +907,14 @@ david@cloudscale.net"
                               else next.delete(c.id);
                               setSelectedContactIds(next);
                             }}
-                            className="rounded text-blue-600 focus:ring-blue-500"
+                            className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-slate-900 truncate">
+                            <p className="font-medium text-white truncate">
                               {c.firstName} {c.lastName} ({c.email})
                             </p>
-                            <p className="text-[11px] text-slate-500">{c.company || "No company"}</p>
+                            <p className="text-[11px] text-zinc-500 font-mono">{c.company || "No company"}</p>
                           </div>
-                          {c.status !== "active" && (
-                            <span className="text-[10px] text-red-600 uppercase font-semibold">
-                              Suppressed
-                            </span>
-                          )}
                         </label>
                       );
                     })
@@ -1009,7 +924,7 @@ david@cloudscale.net"
                 <button
                   onClick={handleAddSelectedSavedContacts}
                   disabled={selectedContactIds.size === 0}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                  className="w-full py-2 bg-white hover:bg-zinc-200 text-black text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
                 >
                   Add Selected ({selectedContactIds.size})
                 </button>
@@ -1018,16 +933,16 @@ david@cloudscale.net"
 
             {/* Validation & Deduplication Statistics */}
             {(duplicateCount > 0 || invalidAddresses.length > 0) && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-1">
+              <div className="p-3 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs space-y-1 font-mono">
                 {duplicateCount > 0 && (
-                  <p className="text-amber-800 font-medium">
-                    ⚡ {duplicateCount} duplicate address(es) automatically removed.
+                  <p className="text-amber-400">
+                    ⚡ {duplicateCount} duplicates automatically deduped.
                   </p>
                 )}
                 {invalidAddresses.length > 0 && (
-                  <p className="text-red-700 font-medium">
+                  <p className="text-red-400">
                     ⚠️ {invalidAddresses.length} invalid email(s) ignored:{" "}
-                    <span className="font-mono text-[11px]">{invalidAddresses.slice(0, 3).join(", ")}</span>
+                    <span>{invalidAddresses.slice(0, 3).join(", ")}</span>
                   </p>
                 )}
               </div>
@@ -1036,42 +951,42 @@ david@cloudscale.net"
             {/* Staged Recipients List */}
             {recipients.length > 0 && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                  <span>Staged Recipients ({recipients.length})</span>
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
+                  <span>Staged ({recipients.length})</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setRecipients(recipients.map((r) => ({ ...r, selected: true })))}
-                      className="text-blue-600 hover:underline text-[11px]"
+                      className="text-zinc-300 hover:text-white"
                     >
                       Select all
                     </button>
                     <span>·</span>
                     <button
                       onClick={() => setRecipients(recipients.map((r) => ({ ...r, selected: false })))}
-                      className="text-slate-500 hover:underline text-[11px]"
+                      className="text-zinc-500 hover:text-zinc-300"
                     >
-                      Deselect all
+                      Deselect
                     </button>
                   </div>
                 </div>
 
-                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                <div className="max-h-60 overflow-y-auto border border-[#262A2E] rounded-lg divide-y divide-[#1C2024]">
                   {recipients.map((r) => (
                     <div
                       key={r.id}
-                      className="p-2.5 flex items-center justify-between hover:bg-slate-50 text-xs"
+                      className="p-2.5 flex items-center justify-between hover:bg-[#171A1D] text-xs transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <input
                           type="checkbox"
                           checked={r.selected !== false}
                           onChange={() => handleToggleRecipient(r.id)}
-                          className="rounded text-blue-600 focus:ring-blue-500"
+                          className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                         />
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-800 truncate">{r.email}</p>
+                          <p className="font-mono text-white truncate text-[11px]">{r.email}</p>
                           {(r.name || r.firstName || r.company) && (
-                            <p className="text-[11px] text-slate-500 truncate">
+                            <p className="text-[10px] text-zinc-500 truncate">
                               {r.name || [r.firstName, r.lastName].filter(Boolean).join(" ")}{" "}
                               {r.company && `· ${r.company}`}
                             </p>
@@ -1081,7 +996,7 @@ david@cloudscale.net"
 
                       <button
                         onClick={() => handleRemoveRecipient(r.id)}
-                        className="text-slate-400 hover:text-red-600 p-1"
+                        className="text-zinc-500 hover:text-red-400 p-1"
                         title="Remove recipient"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1096,65 +1011,56 @@ david@cloudscale.net"
 
         {/* RIGHT COLUMN: Email Content & Rich Editor */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-[#111315] p-5 rounded-xl border border-[#262A2E] space-y-4">
             {/* Template Selector & Subject Line */}
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900">Email Content</h2>
+              <h2 className="text-xs font-mono uppercase tracking-wider text-zinc-400">Email Content</h2>
               <button
                 onClick={() => setTemplateModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-zinc-300 bg-[#171A1D] hover:bg-[#1D2125] rounded-lg border border-[#262A2E] transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Choose Template</span>
               </button>
             </div>
 
             {/* Subject input */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-[11px] font-mono text-zinc-400 mb-1">
                 Subject Line
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Quick question regarding {{company}}'s developer platform"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g. Update regarding {{company}}'s developer platform"
+                className="w-full px-3 py-2 text-sm bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
+              />
             </div>
 
             {/* Personalization Variables Quick Insertion */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-slate-500 font-medium mr-1">Insert Variable:</span>
-              {Array.from(new Set(["name", "firstName", "lastName", "company", "email", ...discoveredCustomFields])).map((tag) => {
-                const isCustom = !["name", "firstName", "lastName", "company", "email"].includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => insertVariable(tag)}
-                    className={`px-2 py-0.5 rounded font-mono text-[11px] border transition-colors ${
-                      isCustom
-                        ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200"
-                    }`}
-                  >
-                    {`{{${tag}}}`}
-                  </button>
-                );
-              })}
+              <span className="text-zinc-500 font-mono text-[11px] mr-1">Variables:</span>
+              {Array.from(new Set(["name", "firstName", "lastName", "company", "email", ...discoveredCustomFields])).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => insertVariable(tag)}
+                  className="px-2 py-0.5 rounded font-mono text-[11px] bg-[#171A1D] hover:bg-[#1D2125] text-zinc-300 border border-[#262A2E] transition-colors"
+                >
+                  {`{{${tag}}}`}
+                </button>
+              ))}
             </div>
 
             {/* Editor Mode Tabs & Visual Toolbar */}
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="border border-[#262A2E] rounded-lg overflow-hidden">
+              <div className="bg-[#171A1D] border-b border-[#262A2E] px-3 py-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => formatDoc("bold")}
-                    className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                    className="p-1.5 rounded hover:bg-[#1D2125] text-zinc-400 hover:text-white"
                     title="Bold"
                   >
                     <Bold className="w-3.5 h-3.5" />
@@ -1162,7 +1068,7 @@ david@cloudscale.net"
                   <button
                     type="button"
                     onClick={() => formatDoc("italic")}
-                    className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                    className="p-1.5 rounded hover:bg-[#1D2125] text-zinc-400 hover:text-white"
                     title="Italic"
                   >
                     <Italic className="w-3.5 h-3.5" />
@@ -1170,7 +1076,7 @@ david@cloudscale.net"
                   <button
                     type="button"
                     onClick={() => formatDoc("insertUnorderedList")}
-                    className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                    className="p-1.5 rounded hover:bg-[#1D2125] text-zinc-400 hover:text-white"
                     title="Bullet List"
                   >
                     <List className="w-3.5 h-3.5" />
@@ -1181,21 +1087,21 @@ david@cloudscale.net"
                       const url = prompt("Enter link URL:");
                       if (url) formatDoc("createLink", url);
                     }}
-                    className="p-1.5 rounded hover:bg-slate-200 text-slate-600"
+                    className="p-1.5 rounded hover:bg-[#1D2125] text-zinc-400 hover:text-white"
                     title="Insert Link"
                   >
                     <LinkIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <div className="flex items-center bg-slate-200 p-0.5 rounded-md text-xs">
+                <div className="flex items-center bg-[#111315] p-0.5 rounded-md text-xs font-mono border border-[#262A2E]">
                   <button
                     type="button"
                     onClick={() => setEditorMode("visual")}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-[11px] transition-colors ${
                       editorMode === "visual"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? "bg-[#171A1D] text-white font-medium"
+                        : "text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
                     Visual
@@ -1203,10 +1109,10 @@ david@cloudscale.net"
                   <button
                     type="button"
                     onClick={() => setEditorMode("html")}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                    className={`px-2.5 py-1 rounded text-[11px] transition-colors ${
                       editorMode === "html"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? "bg-[#171A1D] text-white font-medium"
+                        : "text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
                     HTML Source
@@ -1220,7 +1126,7 @@ david@cloudscale.net"
                   ref={editorRef}
                   contentEditable
                   onInput={(e) => setHtmlContent(e.currentTarget.innerHTML)}
-                  className="min-h-[360px] p-4 text-sm text-slate-900 focus:outline-none overflow-y-auto font-sans"
+                  className="min-h-[360px] p-4 text-sm text-zinc-100 bg-[#0D0F11] focus:outline-none overflow-y-auto font-sans leading-relaxed"
                   style={{ minHeight: "360px" }}
                 />
               ) : (
@@ -1228,7 +1134,7 @@ david@cloudscale.net"
                   rows={16}
                   value={htmlContent}
                   onChange={(e) => setHtmlContent(e.target.value)}
-                  className="w-full p-4 font-mono text-xs text-slate-900 focus:outline-none resize-y"
+                  className="w-full p-4 font-mono text-xs text-zinc-200 bg-[#0D0F11] focus:outline-none resize-y"
                   style={{ minHeight: "360px" }}
                 />
               )}
@@ -1237,13 +1143,13 @@ david@cloudscale.net"
             {/* Plain Text Fallback Section */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">
+                <label className="text-[11px] font-mono text-zinc-400">
                   Plain-Text Fallback
                 </label>
                 <button
                   type="button"
                   onClick={() => setTextContent(htmlToPlainText(htmlContent))}
-                  className="text-[11px] text-blue-600 hover:underline"
+                  className="text-[11px] font-mono text-zinc-400 hover:text-white transition-colors"
                 >
                   Generate from HTML
                 </button>
@@ -1252,25 +1158,25 @@ david@cloudscale.net"
                 rows={3}
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
-                placeholder="Plain text version for text-only email clients..."
-                className="w-full p-2.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                placeholder="Plain text version for text-only clients..."
+                className="w-full p-2.5 text-xs font-mono bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:border-zinc-500 focus:outline-none"
               />
             </div>
 
             {/* Email Attachments (PDF & Documents) Section */}
-            <div className="pt-3 border-t border-slate-100 space-y-2">
+            <div className="pt-3 border-t border-[#1C2024] space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Paperclip className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Attachments (PDF, Documents, Images)</span>
+                <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Attachments</span>
                   {attachments.length > 0 && (
-                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono font-medium">
+                    <span className="text-[10px] bg-[#171A1D] text-zinc-300 border border-[#262A2E] px-1.5 py-0.5 rounded font-mono">
                       {attachments.length}/5
                     </span>
                   )}
                 </label>
-                <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs text-slate-700">
-                  <Upload className="w-3.5 h-3.5 text-blue-600" />
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-zinc-300 bg-[#171A1D] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
+                  <Upload className="w-3.5 h-3.5 text-zinc-400" />
                   <span>Attach PDF / File</span>
                   <input
                     type="file"
@@ -1283,19 +1189,16 @@ david@cloudscale.net"
               </div>
 
               {attachmentError && (
-                <div className="flex items-center gap-1.5 text-rose-600 text-xs bg-rose-50 p-2 rounded-lg border border-rose-200">
+                <div className="flex items-center gap-1.5 text-red-400 text-xs bg-red-950/40 p-2.5 rounded-lg border border-red-500/30 font-mono">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>{attachmentError}</span>
                 </div>
               )}
 
               {attachments.length === 0 ? (
-                <div className="text-center py-3 px-3 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                  <p className="text-xs text-slate-500">
-                    No files attached. Click <strong className="text-slate-700 font-medium">Attach PDF / File</strong> to include PDF documents or files with this email.
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Supports PDF, images, documents (up to 4 MB per file, max 5 attachments)
+                <div className="text-center py-4 px-3 border border-dashed border-[#262A2E] rounded-lg bg-[#171A1D]/20">
+                  <p className="text-xs text-zinc-500 font-mono">
+                    No files attached. Up to 4 MB per file (max 5 attachments).
                   </p>
                 </div>
               ) : (
@@ -1308,17 +1211,17 @@ david@cloudscale.net"
                     return (
                       <div
                         key={file.id || fileIdx}
-                        className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-lg border border-[#262A2E] bg-[#171A1D] hover:border-zinc-600 transition-colors"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`p-1.5 rounded ${isPdf ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
+                          <div className="p-1.5 rounded bg-[#111315] border border-[#262A2E] text-zinc-400">
                             <FileText className="w-4 h-4" />
                           </div>
                           <div className="truncate">
-                            <span className="text-xs font-medium text-slate-800 block truncate">
+                            <span className="text-xs font-medium text-white block truncate">
                               {file.filename}
                             </span>
-                            <span className="text-[10.5px] text-slate-400 font-mono">
+                            <span className="text-[10px] text-zinc-500 font-mono">
                               {isPdf ? "PDF Document" : file.contentType} · {sizeFormatted}
                             </span>
                           </div>
@@ -1326,7 +1229,7 @@ david@cloudscale.net"
                         <button
                           type="button"
                           onClick={() => removeAttachment(file.id || fileIdx)}
-                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
                           title="Remove attachment"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1343,47 +1246,45 @@ david@cloudscale.net"
 
       {/* MODAL 1: Choose Template Modal */}
       {templateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Choose an Email Template</h3>
-              <button onClick={() => setTemplateModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-2xl w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
+              <h3 className="text-sm font-medium text-white">Choose an Email Template</h3>
+              <button onClick={() => setTemplateModalOpen(false)} className="p-1 text-zinc-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {availableTemplates.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  onClick={() => {
-                    setSubject(tmpl.subject);
-                    setHtmlContent(tmpl.htmlContent);
-                    setTextContent(tmpl.textContent || htmlToPlainText(tmpl.htmlContent));
-                    if (tmpl.attachments && tmpl.attachments.length > 0) {
-                      setAttachments(tmpl.attachments);
-                    }
-                    setTemplateModalOpen(false);
-                  }}
-                  className="p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-sm cursor-pointer transition-all bg-white"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-slate-900">{tmpl.name}</span>
-                    <div className="flex items-center gap-1">
-                      {tmpl.attachments && tmpl.attachments.length > 0 && (
-                        <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 flex items-center gap-0.5">
-                          <Paperclip className="w-2.5 h-2.5 text-rose-500" />
-                          <span>{tmpl.attachments.length}</span>
-                        </span>
-                      )}
-                      <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+              {availableTemplates.length === 0 ? (
+                <div className="col-span-2 py-8 text-center text-xs font-mono text-zinc-500">
+                  No saved templates found. Create custom templates in the Templates section.
+                </div>
+              ) : (
+                availableTemplates.map((tmpl) => (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => {
+                      setSubject(tmpl.subject);
+                      setHtmlContent(tmpl.htmlContent);
+                      setTextContent(tmpl.textContent || htmlToPlainText(tmpl.htmlContent));
+                      if (tmpl.attachments && tmpl.attachments.length > 0) {
+                        setAttachments(tmpl.attachments);
+                      }
+                      setTemplateModalOpen(false);
+                    }}
+                    className="p-4 border border-[#262A2E] rounded-xl hover:border-zinc-500 cursor-pointer transition-all bg-[#171A1D]"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white">{tmpl.name}</span>
+                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#111315] border border-[#262A2E] text-zinc-400">
                         {tmpl.category}
                       </span>
                     </div>
+                    <p className="text-xs text-zinc-400 line-clamp-2 mt-1">{tmpl.description}</p>
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-1">{tmpl.description}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1391,29 +1292,28 @@ david@cloudscale.net"
 
       {/* MODAL 2: Interactive Live Preview Modal */}
       {previewOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-[#262A2E] pb-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Email Preview & Personalization Check</h3>
-                <p className="text-xs text-slate-500">
-                  Simulating message as rendered for recipient {previewRecipientIndex + 1} of{" "}
-                  {Math.max(1, activeSelectedRecipients.length)}
+                <h3 className="text-sm font-medium text-white">Email Preview & Personalization Check</h3>
+                <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                  Simulating recipient {previewRecipientIndex + 1} of {Math.max(1, activeSelectedRecipients.length)}
                 </p>
               </div>
-              <button onClick={() => setPreviewOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={() => setPreviewOpen(false)} className="p-1 text-zinc-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Recipient switcher */}
             {activeSelectedRecipients.length > 1 && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-500">Preview as:</span>
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span className="text-zinc-500">Preview as:</span>
                 <select
                   value={previewRecipientIndex}
                   onChange={(e) => setPreviewRecipientIndex(Number(e.target.value))}
-                  className="px-2 py-1 border border-slate-300 rounded text-xs"
+                  className="px-2 py-1 bg-[#171A1D] border border-[#262A2E] text-white rounded text-xs focus:outline-none"
                 >
                   {activeSelectedRecipients.slice(0, 10).map((r, i) => (
                     <option key={r.id} value={i}>
@@ -1425,25 +1325,25 @@ david@cloudscale.net"
             )}
 
             {/* Email Header Metadata */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+            <div className="p-3 bg-[#171A1D] border border-[#262A2E] rounded-lg text-xs space-y-1 font-mono">
               <div>
-                <span className="font-semibold text-slate-600">From: </span>
-                <span className="text-slate-900 font-mono">
+                <span className="text-zinc-500">From: </span>
+                <span className="text-zinc-200 font-mono">
                   "{fromName}" &lt;{fromEmail}&gt;
                 </span>
               </div>
               <div>
-                <span className="font-semibold text-slate-600">To: </span>
-                <span className="text-slate-900 font-mono">{previewTarget.email}</span>
+                <span className="text-zinc-500">To: </span>
+                <span className="text-zinc-200 font-mono">{previewTarget.email}</span>
               </div>
               <div>
-                <span className="font-semibold text-slate-600">Subject: </span>
-                <span className="text-slate-900 font-medium">{previewSubject}</span>
+                <span className="text-zinc-500">Subject: </span>
+                <span className="text-white font-sans font-medium">{previewSubject}</span>
               </div>
               {attachments.length > 0 && (
                 <div>
-                  <span className="font-semibold text-slate-600">Attachments: </span>
-                  <span className="text-blue-700 font-medium">
+                  <span className="text-zinc-500">Attachments: </span>
+                  <span className="text-zinc-300">
                     {attachments.map((a) => a.filename).join(", ")} ({attachments.length} file{attachments.length > 1 ? "s" : ""})
                   </span>
                 </div>
@@ -1451,10 +1351,10 @@ david@cloudscale.net"
             </div>
 
             {/* Rendered HTML Body */}
-            <div className="flex-1 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-white">
+            <div className="flex-1 overflow-y-auto border border-[#262A2E] rounded-lg p-6 bg-white text-slate-900 shadow-inner">
               <div
                 dangerouslySetInnerHTML={{ __html: previewHtml }}
-                className="font-sans"
+                className="font-sans leading-relaxed text-sm"
               />
             </div>
           </div>
@@ -1463,53 +1363,49 @@ david@cloudscale.net"
 
       {/* MODAL 3: Confirm & Schedule Dispatch Modal */}
       {confirmSendOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Confirm Campaign Dispatch</h3>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 space-y-4">
+            <h3 className="text-base font-medium text-white">Confirm Campaign Dispatch</h3>
 
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-2 text-blue-900">
+            <div className="p-4 bg-[#171A1D] border border-[#262A2E] rounded-xl text-xs space-y-2 font-mono">
               <div className="flex justify-between">
-                <span className="text-blue-700">Recipients:</span>
-                <span className="font-bold">{activeSelectedRecipients.length} addresses</span>
+                <span className="text-zinc-400">Recipients:</span>
+                <span className="text-white font-medium">{activeSelectedRecipients.length} addresses</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-blue-700">Sender Identity:</span>
-                <span className="font-medium font-mono">{fromEmail}</span>
+                <span className="text-zinc-400">Sender Identity:</span>
+                <span className="text-zinc-300">{fromEmail}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-blue-700">Delivery Service:</span>
-                <span className="font-semibold text-emerald-800">
-                  {profile?.settings?.smtp?.host ? `Custom SMTP (${profile.settings.smtp.host}) · Unlimited Sending` : "Self-Hosted SMTP · Unlimited Sending"}
+                <span className="text-zinc-400">Delivery Transport:</span>
+                <span className="text-emerald-400">
+                  {profile?.settings?.smtp?.host ? `SMTP (${profile.settings.smtp.host})` : "Direct SMTP"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-blue-700">Engagement Tracking:</span>
-                <span className="font-medium">
-                  {trackOpens ? "Opens (Pixel)" : ""} {trackOpens && trackClicks ? "& " : ""}{trackClicks ? "Clicks (Redirect)" : ""}{!trackOpens && !trackClicks ? "Disabled" : " Active"}
+                <span className="text-zinc-400">Tracking:</span>
+                <span className="text-zinc-300">
+                  {trackOpens ? "Opens " : ""}{trackClicks ? "& Clicks" : ""}{!trackOpens && !trackClicks ? "Disabled" : ""}
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blue-700">Suppression Check:</span>
-                <span className="font-medium text-emerald-700">Enabled</span>
               </div>
               {attachments.length > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-blue-700">Attachments:</span>
-                  <span className="font-bold">{attachments.length} file(s) ({attachments.map((a) => a.filename).join(", ")})</span>
+                  <span className="text-zinc-400">Attachments:</span>
+                  <span className="text-white">{attachments.length} file(s)</span>
                 </div>
               )}
             </div>
 
             {/* Schedule Option */}
-            <div className="pt-2 border-t border-slate-100">
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer mb-2">
+            <div className="pt-2 border-t border-[#262A2E]">
+              <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer mb-2">
                 <input
                   type="checkbox"
                   checked={scheduleMode}
                   onChange={(e) => setScheduleMode(e.target.checked)}
-                  className="rounded text-blue-600"
+                  className="rounded bg-[#111315] border-[#262A2E] text-white focus:ring-0"
                 />
-                <span>Schedule for a future date & time</span>
+                <span>Schedule for future date & time</span>
               </label>
 
               {scheduleMode && (
@@ -1517,7 +1413,7 @@ david@cloudscale.net"
                   type="datetime-local"
                   value={scheduleDateTime}
                   onChange={(e) => setScheduleDateTime(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 text-xs bg-[#171A1D] border border-[#262A2E] text-white rounded-lg focus:outline-none font-mono"
                 />
               )}
             </div>
@@ -1525,15 +1421,15 @@ david@cloudscale.net"
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setConfirmSendOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg"
+                className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExecuteSend}
-                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm"
+                className="px-4 py-2 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
               >
-                {scheduleMode ? "Schedule Campaign" : "Send Now"}
+                {scheduleMode ? "Schedule Campaign" : "Dispatch Campaign"}
               </button>
             </div>
           </div>
@@ -1542,16 +1438,16 @@ david@cloudscale.net"
 
       {/* MODAL 4: Real-time Dispatch Progress Modal */}
       {isProcessing && sendProgress && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 text-center space-y-4">
-            <RefreshCw className="w-10 h-10 text-blue-600 animate-spin mx-auto" />
-            <h3 className="text-base font-bold text-slate-900">Dispatching Bulk Campaign</h3>
-            <p className="text-xs text-slate-500">{sendProgress.statusText}</p>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-md w-full p-6 text-center space-y-4">
+            <RefreshCw className="w-8 h-8 text-white animate-spin mx-auto" />
+            <h3 className="text-base font-medium text-white">Dispatching Bulk Campaign</h3>
+            <p className="text-xs text-zinc-400 font-mono">{sendProgress.statusText}</p>
 
             {/* Progress Bar */}
-            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-[#171A1D] border border-[#262A2E] rounded-full h-2 overflow-hidden">
               <div
-                className="bg-blue-600 h-full transition-all duration-300 rounded-full"
+                className="bg-white h-full transition-all duration-300 rounded-full"
                 style={{
                   width: `${
                     sendProgress.total > 0
@@ -1562,7 +1458,7 @@ david@cloudscale.net"
               />
             </div>
 
-            <div className="flex justify-between text-xs text-slate-600 pt-1">
+            <div className="flex justify-between text-xs text-zinc-500 font-mono pt-1">
               <span>{sendProgress.sent} dispatched</span>
               <span>{sendProgress.failed} failed</span>
               <span>{sendProgress.total} total</span>
