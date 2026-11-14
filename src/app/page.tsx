@@ -59,7 +59,7 @@ export default function LandingPage() {
       {/* Top Banner / Announcement */}
       <div className="border-b border-[#1C2024] bg-[#0D0F11]/60 px-4 py-2 text-center text-xs text-[#A1A1AA] flex items-center justify-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
-        <span>Postvane v3.0 is live: Native DKIM signing, high-speed MongoDB indexing & continuous auto-resume.</span>
+        <span>Postvane v3.0 is live: Native DKIM signing, high-speed delivery indexing & continuous auto-resume.</span>
       </div>
 
       {/* Navigation */}

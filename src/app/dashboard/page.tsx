@@ -324,7 +324,7 @@ export default function DashboardOverviewPage() {
           <div className="p-4 rounded-xl bg-[#0D0F11] border border-[#1C2024] space-y-2 text-xs font-mono text-[#71717A]">
             <div className="flex items-center justify-between">
               <span>Database Engine:</span>
-              <span className="text-[#22C55E]">MongoDB Atlas Connected</span>
+              <span className="text-[#22C55E]">High-Availability Connected</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Auth Provider:</span>

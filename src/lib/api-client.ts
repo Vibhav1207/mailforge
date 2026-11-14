@@ -48,10 +48,16 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await apiFetch(path, init);
-  const data = await response.json();
+  const text = await response.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { error: text || `HTTP ${response.status} response` };
+  }
   if (!response.ok) {
     const detail = data.issues?.slice(0, 3).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`).join(" ");
-    throw new Error(detail || data.error || "The request failed.");
+    throw new Error(detail || data.error || `Request failed with status ${response.status}`);
   }
   return data as T;
 }

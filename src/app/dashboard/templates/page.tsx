@@ -30,7 +30,6 @@ import {
   FolderPlus,
   ExternalLink,
   Code2,
-  Database,
   Check,
   Paperclip,
   FileText,
@@ -65,9 +64,9 @@ export default function TemplatesPage() {
   const [modalAttachments, setModalAttachments] = useState<EmailAttachment[]>([]);
   const [modalAttachmentError, setModalAttachmentError] = useState<string | null>(null);
 
-  // MongoDB Image Assets Library Modal
+  // Asset Folders & Media Library Modal
   const [imageLibraryOpen, setImageLibraryOpen] = useState(false);
-  const [mongoImages, setMongoImages] = useState<TemplateImage[]>([]);
+  const [libraryImages, setLibraryImages] = useState<TemplateImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [libraryFolderFilter, setLibraryFolderFilter] = useState("all");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -87,7 +86,7 @@ export default function TemplatesPage() {
     }
   };
 
-  const loadMongoImages = async (folder?: string) => {
+  const loadLibraryImages = async (folder?: string) => {
     setLoadingImages(true);
     try {
       const q = folder && folder !== "all" ? `?folder=${encodeURIComponent(folder)}` : "";
@@ -95,10 +94,10 @@ export default function TemplatesPage() {
       if (res.ok) {
         const text = await res.text();
         const data = text ? JSON.parse(text) : {};
-        setMongoImages(data.images || []);
+        setLibraryImages(data.images || []);
       }
     } catch (err) {
-      console.error("Failed to load MongoDB images:", err);
+      console.error("Failed to load library images:", err);
     } finally {
       setLoadingImages(false);
     }
@@ -253,7 +252,7 @@ export default function TemplatesPage() {
       }
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to upload image to MongoDB");
+        throw new Error(data.error || "Failed to upload image");
       }
 
       setModalImageUrl(data.image.url);
@@ -302,7 +301,7 @@ export default function TemplatesPage() {
         body: JSON.stringify(toSave),
       });
     } catch (err) {
-      console.warn("MongoDB template save sync notice:", err);
+      console.warn("Template save sync notice:", err);
     }
 
     setEditModalOpen(false);
@@ -344,7 +343,7 @@ export default function TemplatesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", uploadLibraryFolder);
+      formData.append("folder", uploadLibraryFolder || "general");
 
       const res = await apiFetch("/api/templates/images", {
         method: "POST",
@@ -352,7 +351,7 @@ export default function TemplatesPage() {
       });
 
       if (res.ok) {
-        await loadMongoImages(libraryFolderFilter);
+        await loadLibraryImages(libraryFolderFilter);
       } else {
         const text = await res.text();
         let errData: any = {};
@@ -369,21 +368,29 @@ export default function TemplatesPage() {
   };
 
   const handleDeleteImage = async (imageId: string) => {
-    if (!confirm("Delete this image from MongoDB?")) return;
+    if (!confirm("Are you sure you want to delete this asset?")) return;
     try {
       const res = await apiFetch(`/api/templates/images/${imageId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        await loadMongoImages(libraryFolderFilter);
+        await loadLibraryImages(libraryFolderFilter);
       }
     } catch (err) {
-      console.error("Delete image error:", err);
+      console.error("Delete asset error:", err);
     }
   };
 
   const allFolders = Array.from(
-    new Set(templates.map((t) => t.folder || "general"))
+    new Set(["general", ...templates.map((t) => t.folder || "general")])
+  ).filter(Boolean);
+
+  const mediaFolders = Array.from(
+    new Set([
+      "general",
+      ...templates.map((t) => t.folder || "general"),
+      ...libraryImages.map((i) => i.folder || "general"),
+    ])
   ).filter(Boolean);
 
   const filtered = templates.filter((t) => {
@@ -399,7 +406,7 @@ export default function TemplatesPage() {
         <div>
           <h1 className="text-xl font-medium tracking-tight text-white">Email Templates & Assets</h1>
           <p className="text-xs text-zinc-400 font-mono mt-1">
-            Modular HTML layouts, variable tokens, and MongoDB media asset folders.
+            Modular HTML layouts, variable tokens, and organized template folders.
           </p>
         </div>
 
@@ -407,12 +414,12 @@ export default function TemplatesPage() {
           <button
             onClick={() => {
               setImageLibraryOpen(true);
-              loadMongoImages("all");
+              loadLibraryImages("all");
             }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] hover:border-zinc-500 hover:text-white border border-[#262A2E] rounded-lg transition-colors"
           >
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span>MongoDB Assets</span>
+            <Folder className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Asset Folders</span>
           </button>
 
           <button
@@ -492,7 +499,7 @@ export default function TemplatesPage() {
               key={t.id}
               className="bg-[#111315] rounded-xl border border-[#262A2E] flex flex-col justify-between hover:border-zinc-500 transition-all overflow-hidden group"
             >
-              {/* Optional Header Banner Image Stored in MongoDB */}
+              {/* Optional Header Banner Image */}
               {t.imageUrl && (
                 <div className="w-full h-36 bg-[#171A1D] relative overflow-hidden border-b border-[#262A2E]">
                   <img
@@ -500,10 +507,6 @@ export default function TemplatesPage() {
                     alt={t.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 backdrop-blur-xs text-zinc-200 text-[10px] px-2 py-0.5 rounded border border-[#262A2E] font-mono">
-                    <Database className="w-2.5 h-2.5 text-emerald-400" />
-                    <span>MongoDB Asset</span>
-                  </div>
                 </div>
               )}
 
@@ -606,7 +609,7 @@ export default function TemplatesPage() {
                   {editingTemplate ? "Edit Email Template" : "Create New Custom Template"}
                 </h2>
                 <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                  Configure HTML body, folder category, and MongoDB banner.
+                  Configure HTML body, folder category, and header banner.
                 </p>
               </div>
               <button
@@ -650,7 +653,7 @@ export default function TemplatesPage() {
                 </div>
               </div>
 
-              {/* Folder & Optional MongoDB Image Section */}
+              {/* Folder & Optional Image Section */}
               <div className="p-4 bg-[#171A1D] rounded-xl border border-[#262A2E] space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -662,7 +665,7 @@ export default function TemplatesPage() {
                       type="text"
                       value={modalFolder}
                       onChange={(e) => setModalFolder(e.target.value)}
-                      placeholder="newsletters, promotions, banners"
+                      placeholder="general, marketing, outreach"
                       className="w-full px-3 py-1.5 text-xs bg-[#111315] border border-[#262A2E] text-white rounded-lg font-mono focus:border-zinc-500 focus:outline-none"
                     />
                   </div>
@@ -673,15 +676,15 @@ export default function TemplatesPage() {
                         <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
                         <span>Header Banner (Optional)</span>
                       </span>
-                      <span className="text-[10px] font-mono text-emerald-400">
-                        MongoDB Stored
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        JPG, PNG, WebP
                       </span>
                     </label>
 
                     <div className="flex items-center gap-2">
                       <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-zinc-300 bg-[#111315] border border-[#262A2E] rounded-lg hover:border-zinc-500 hover:text-white transition-colors">
                         <UploadCloud className="w-3.5 h-3.5" />
-                        <span>{uploadingImage ? "Uploading..." : "Upload"}</span>
+                        <span>{uploadingImage ? "Uploading..." : "Upload Image"}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -884,20 +887,20 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {/* MONGODB IMAGE ASSETS LIBRARY MODAL */}
+      {/* ASSET FOLDERS & MEDIA LIBRARY MODAL */}
       {imageLibraryOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#111315] rounded-xl border border-[#262A2E] max-w-3xl w-full p-6 space-y-4 my-8">
             <div className="flex items-center justify-between pb-3 border-b border-[#262A2E]">
               <div>
                 <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-400" />
+                  <Folder className="w-4 h-4 text-zinc-300" />
                   <h2 className="text-sm font-medium text-white">
-                    MongoDB Template Image Assets
+                    Asset Folders & Media Library
                   </h2>
                 </div>
                 <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                  Direct database-backed image hosting organized in folders.
+                  Personal media files organized into your custom folders.
                 </p>
               </div>
               <button
@@ -917,14 +920,14 @@ export default function TemplatesPage() {
                   type="text"
                   value={uploadLibraryFolder}
                   onChange={(e) => setUploadLibraryFolder(e.target.value)}
-                  placeholder="general, banners..."
+                  placeholder="general, marketing..."
                   className="px-2.5 py-1 text-xs bg-[#111315] border border-[#262A2E] text-white rounded w-40 font-mono focus:outline-none"
                 />
               </div>
 
               <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors">
                 <UploadCloud className="w-3.5 h-3.5" />
-                <span>{uploadingLibraryImg ? "Uploading..." : "Upload New Image"}</span>
+                <span>{uploadingLibraryImg ? "Uploading..." : "Upload to Folder"}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -935,15 +938,15 @@ export default function TemplatesPage() {
               </label>
             </div>
 
-            {/* Filter images by folder */}
-            <div className="flex items-center gap-2 text-xs font-mono">
+            {/* Filter images by folder - user's own folders */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
               <span className="text-zinc-500">Folder filter:</span>
-              {["all", "general", "banners", "newsletters", "promotions"].map((f) => (
+              {["all", ...mediaFolders].map((f) => (
                 <button
                   key={f}
                   onClick={() => {
                     setLibraryFolderFilter(f);
-                    loadMongoImages(f);
+                    loadLibraryImages(f);
                   }}
                   className={`px-2.5 py-1 rounded text-xs transition-colors ${
                     libraryFolderFilter === f
@@ -951,7 +954,7 @@ export default function TemplatesPage() {
                       : "bg-[#171A1D] text-zinc-400 hover:text-zinc-200 border border-[#262A2E]"
                   }`}
                 >
-                  {f}
+                  {f === "all" ? "All Folders" : f}
                 </button>
               ))}
             </div>
@@ -959,16 +962,16 @@ export default function TemplatesPage() {
             {/* Images Grid */}
             {loadingImages ? (
               <div className="py-12 text-center text-xs font-mono text-zinc-500">
-                LOADING MONGODB IMAGE RECORDS...
+                LOADING ASSETS...
               </div>
-            ) : mongoImages.length === 0 ? (
+            ) : libraryImages.length === 0 ? (
               <div className="py-12 text-center text-xs font-mono text-zinc-500 border border-dashed border-[#262A2E] rounded-xl space-y-2">
                 <ImageIcon className="w-8 h-8 text-zinc-600 mx-auto" />
-                <p>No template images found in this folder.</p>
+                <p>No assets found in this folder.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1">
-                {mongoImages.map((img) => (
+                {libraryImages.map((img) => (
                   <div
                     key={img.id}
                     className="border border-[#262A2E] rounded-xl overflow-hidden bg-[#171A1D] group flex flex-col justify-between"
@@ -1011,7 +1014,7 @@ export default function TemplatesPage() {
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
                           className="text-zinc-500 hover:text-red-400 p-1"
-                          title="Delete from MongoDB"
+                          title="Delete asset"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
